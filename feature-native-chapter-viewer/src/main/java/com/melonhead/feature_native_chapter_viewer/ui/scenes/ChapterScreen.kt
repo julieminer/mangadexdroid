@@ -6,18 +6,29 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.forEachGesture
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
@@ -105,7 +116,7 @@ private fun ChapterView(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             CloseBanner(title, onDoneTapped = onDoneTapped)
-            var scale by remember { mutableStateOf(1f) }
+            var scale by remember { mutableFloatStateOf(1f) }
             var offset by remember { mutableStateOf(Offset.Zero) }
 
             Box(
@@ -172,9 +183,9 @@ private fun ChapterView(
 
 @Composable
 private fun getWidthHeight(): Pair<Int, Int> {
-    val configuration = LocalConfiguration.current
-    val width = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx() }.toInt()
-    val height = with(LocalDensity.current) { configuration.screenHeightDp.dp.toPx() }.toInt()
+    val configuration = LocalWindowInfo.current
+    val width = with(LocalDensity.current) { configuration.containerSize.width.dp.toPx() }.toInt()
+    val height = with(LocalDensity.current) { configuration.containerSize.height.dp.toPx() }.toInt()
     return width to height
 }
 

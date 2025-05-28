@@ -11,7 +11,7 @@ import com.google.firebase.ktx.Firebase
 import com.melonhead.lib_app_data.models.RenderStyle
 import com.melonhead.lib_database.extensions.addValueEventListenerFlow
 import com.melonhead.lib_database.firebase.FirebaseDbUser
-import dataStore
+import com.melonhead.lib_app_data.extensions.dataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay

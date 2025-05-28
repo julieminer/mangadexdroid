@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.lib_core.theme.MangadexFollowerTheme
@@ -35,6 +37,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        enableEdgeToEdge()
+
         requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
             // do nothing for now
         }
@@ -51,33 +55,35 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val loginStatus by viewModel.loginStatus.observeAsState()
-                    val clientDetails by viewModel.clientDetails.observeAsState()
+                    Surface(Modifier.fillMaxSize().statusBarsPadding()) {
+                        val loginStatus by viewModel.loginStatus.observeAsState()
+                        val clientDetails by viewModel.clientDetails.observeAsState()
 
-                    when (loginStatus) {
-                        LoginStatus.LoggedIn -> {
-                            navigator.ComposeWithKey(
-                                screenKey = ScreenKey.MangaListScreen(
-                                    buildVersionName = BuildConfig.VERSION_NAME,
-                                    buildVersionCode = BuildConfig.VERSION_CODE.toString(),
+                        when (loginStatus) {
+                            LoginStatus.LoggedIn -> {
+                                navigator.ComposeWithKey(
+                                    screenKey = ScreenKey.MangaListScreen(
+                                        buildVersionName = BuildConfig.VERSION_NAME,
+                                        buildVersionCode = BuildConfig.VERSION_CODE.toString(),
+                                    )
                                 )
-                            )
-                        }
+                            }
 
-                        LoginStatus.LoggedOut, null -> {
-                            val (email, clientId, clientSecret) = clientDetails ?: Triple("", "", "")
-                            navigator.ComposeWithKey(screenKey = ScreenKey.OauthLoginScreen(onLoginTapped = { username, password, clientId, clientSecret ->
-                                viewModel.authenticate(
-                                    username,
-                                    password,
-                                    clientId,
-                                    clientSecret
-                                )
-                            },
-                                email, clientId, clientSecret))
-                        }
+                            LoginStatus.LoggedOut, null -> {
+                                val (email, clientId, clientSecret) = clientDetails ?: Triple("", "", "")
+                                navigator.ComposeWithKey(screenKey = ScreenKey.OauthLoginScreen(onLoginTapped = { username, password, clientId, clientSecret ->
+                                    viewModel.authenticate(
+                                        username,
+                                        password,
+                                        clientId,
+                                        clientSecret
+                                    )
+                                },
+                                    email, clientId, clientSecret))
+                            }
 
-                        LoginStatus.LoggingIn -> LoadingScreen(null)
+                            LoginStatus.LoggingIn -> LoadingScreen(null)
+                        }
                     }
                 }
             }

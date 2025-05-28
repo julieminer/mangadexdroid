@@ -7,31 +7,6 @@ plugins {
 
 android {
     namespace 'com.melonhead.data_manga'
-    compileSdk 34
-
-    defaultConfig {
-        minSdk 24
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles "consumer-rules.pro"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    buildFeatures {
-        compose true
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
 }
 
 dependencies {
@@ -60,3 +35,5 @@ dependencies {
     api project(":data-manga")
     api project(':lib-app-data')
 }
+
+apply from: "$rootProject.projectDir/compose-module.gradle"
