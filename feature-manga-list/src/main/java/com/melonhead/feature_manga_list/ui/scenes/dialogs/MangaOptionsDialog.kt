@@ -71,6 +71,11 @@ private fun MangaOptionsDialogContent(
 ) {
     var usesWebView by remember { mutableStateOf(usesWebView) }
 
+    fun toggleWebView() {
+        usesWebView = usesWebView.not()
+        onToggleRendering(usesWebView)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -101,15 +106,14 @@ private fun MangaOptionsDialogContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onToggleRendering(!usesWebView) }
+                    .clickable { toggleWebView() }
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = "Render Chapters with WebView")
                 Switch(checked = usesWebView, onCheckedChange = {
-                    onToggleRendering(it)
-                    usesWebView = usesWebView.not()
+                    toggleWebView()
                 })
             }
 
