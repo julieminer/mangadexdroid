@@ -42,9 +42,11 @@ import java.lang.Integer.min
 @Composable
 internal fun ChapterScreen(
     currentPage: String?,
+    description: String?,
     allPages: List<String>?,
     chapterTapAreaSize: Dp,
     onCompletedChapter: () -> Unit,
+    onSummaryTapped: () -> Unit,
     nextPage: () -> Unit,
     prevPage: () -> Unit,
 ) {
@@ -71,9 +73,11 @@ internal fun ChapterScreen(
         val totalPages = allPages.count()
         ChapterView(
             title = "${currentPageIndex + 1} / $totalPages",
+            description = description,
             currentPageIndex = currentPageIndex,
             currentPageUrl = currentPage,
             chapterTapAreaSize = chapterTapAreaSize,
+            onSummaryTapped = onSummaryTapped,
             tappedRightSide = {
                 val nextPreloadIndex = currentPageIndex + 2
                 val start = min(nextPreloadIndex, totalPages - 1)
@@ -104,9 +108,11 @@ private fun ChapterTapArea(chapterTapAreaSize: Dp, modifier: Modifier) {
 @Composable
 private fun ChapterView(
     title: String,
+    description: String?,
     currentPageUrl: String,
     currentPageIndex: Int,
     chapterTapAreaSize: Dp,
+    onSummaryTapped: () -> Unit,
     tappedRightSide: () -> Unit,
     tappedLeftSide: () -> Unit,
     onDoneTapped: () -> Unit
@@ -115,7 +121,7 @@ private fun ChapterView(
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            CloseBanner(title, onDoneTapped = onDoneTapped)
+            CloseBanner(title, onDoneTapped = onDoneTapped, hasDescription = description != null, onSummaryTapped = onSummaryTapped)
             var scale by remember { mutableFloatStateOf(1f) }
             var offset by remember { mutableStateOf(Offset.Zero) }
 

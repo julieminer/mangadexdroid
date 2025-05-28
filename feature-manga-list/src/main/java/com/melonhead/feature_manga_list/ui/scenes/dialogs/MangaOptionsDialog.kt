@@ -42,6 +42,8 @@ internal fun MangaOptionsDialog(
 
         ModalBottomSheet(sheetState = sheetState, onDismissRequest = { onDismissed() }) {
             MangaOptionsDialogContent(
+                mangaTitle = manga.title,
+                mangaDesc = manga.description,
                 usesWebView = manga.useWebview,
                 onChangeTitle = { showTitleChangeDialogForManga = true },
                 onToggleRendering = { onToggleRendering(manga, it) },
@@ -52,9 +54,7 @@ internal fun MangaOptionsDialog(
                             onDismissed()
                         }
                     }
-                },
-                mangaTitle = manga.title,
-                mangaDesc = manga.description
+                }
             )
         }
     }

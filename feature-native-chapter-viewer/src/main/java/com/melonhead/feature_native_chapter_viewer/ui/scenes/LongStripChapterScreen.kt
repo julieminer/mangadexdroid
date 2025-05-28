@@ -31,6 +31,8 @@ private val LazyListState.isLastItemVisible: Boolean
 @Composable
 internal fun LongStripChapterScreen(
     allPages: List<String>?,
+    description: String?,
+    onSummaryTapped: () -> Unit,
     onCompletedChapter: () -> Unit
 ) {
     if (allPages == null) {
@@ -65,7 +67,9 @@ internal fun LongStripChapterScreen(
 
             CloseBanner(
                 "$pageIndex / ${allPages.count()}",
-                onDoneTapped = onCompletedChapter
+                onDoneTapped = onCompletedChapter,
+                hasDescription = description != null,
+                onSummaryTapped = onSummaryTapped,
             )
 
             LazyColumn(
@@ -154,7 +158,7 @@ private fun String.preloadImageRequest(
 @Composable
 private fun LongStripPreview() {
     MangadexFollowerTheme {
-        LongStripChapterScreen(listOf()) {
+        LongStripChapterScreen(listOf(), "", {}) {
 
         }
     }

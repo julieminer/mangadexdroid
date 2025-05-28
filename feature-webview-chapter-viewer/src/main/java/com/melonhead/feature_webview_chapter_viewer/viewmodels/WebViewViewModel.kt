@@ -16,7 +16,8 @@ internal class WebViewViewModel(
     private val mutableUrl: MutableLiveData<String?> = MutableLiveData(null)
     val url = mutableUrl.asLiveData()
 
-    private lateinit var manga: UIManga
+    lateinit var manga: UIManga
+        private set
     private lateinit var chapter: UIChapter
 
     @Suppress("DEPRECATION")
