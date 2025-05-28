@@ -9,7 +9,7 @@ kspPluginVersion = "2.0.0-1.0.21"
 activityComposeVersion = "1.9.1"
 appcompatVersion = "1.7.0"
 coilComposeVersion = "2.2.2"
-composeVersion = "1.6.8"
+composeVersion = "1.8.2"
 coreKtxVersion = "1.16.0"
 crashlyticsVersion = "19.4.3"
 datastorePreferencesVersion = "1.1.7"
@@ -62,7 +62,7 @@ lifecycle-common = { module = "androidx.lifecycle:lifecycle-common", version.ref
 lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycleRuntimeKtxVersion" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycleRuntimeKtxVersion" }
 lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtxVersion" }
-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "composeVersion" }
+material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "material3Version" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3Version" }
 room-compiler = { module = "androidx.room:room-compiler", name = "room-compiler", version.ref = "roomVersion" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomVersion" }
