@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -15,7 +16,9 @@ import androidx.compose.ui.tooling.preview.Preview
 fun CloseBanner(
     title: String,
     modifier: Modifier = Modifier,
-    onDoneTapped: () -> Unit
+    hasDescription: Boolean,
+    onDoneTapped: () -> Unit,
+    onSummaryTapped: () -> Unit,
 ) {
     CenterAlignedTopAppBar(
         modifier = modifier,
@@ -35,6 +38,15 @@ fun CloseBanner(
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.surface)
                 )
             }
+            if (hasDescription) {
+                IconButton(onClick = { onSummaryTapped() }) {
+                    Image(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Info Button",
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.surface)
+                    )
+                }
+            }
         }
     )
 }
@@ -44,8 +56,9 @@ fun CloseBanner(
 private fun CloseBannerPreview() {
     Surface {
         Column {
-            CloseBanner(title = "") { }
-            CloseBanner("Test Title") { }
+            CloseBanner(title = "", hasDescription = false, onDoneTapped = { }, onSummaryTapped = { })
+            CloseBanner("Test Title", hasDescription = false, onDoneTapped = { }, onSummaryTapped = { })
+            CloseBanner("Test Title", hasDescription = true, onDoneTapped = { }, onSummaryTapped = { })
         }
     }
 }

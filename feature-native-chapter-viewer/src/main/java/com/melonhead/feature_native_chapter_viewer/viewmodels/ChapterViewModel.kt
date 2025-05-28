@@ -36,7 +36,8 @@ internal class ChapterViewModel(
     private val mutablePageIndex = MutableStateFlow(0)
     val currentPage = mutableChapterData.combine(mutablePageIndex) { data, index -> data?.getOrNull(index) }
 
-    private lateinit var manga: UIManga
+    lateinit var manga: UIManga
+        private set
     private lateinit var chapter: UIChapter
     private lateinit var chapterPagesData: List<String>
 

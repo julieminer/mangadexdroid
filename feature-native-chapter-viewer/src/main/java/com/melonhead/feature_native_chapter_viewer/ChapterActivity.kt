@@ -7,11 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.melonhead.feature_native_chapter_viewer.ui.scenes.ChapterScreen
 import com.melonhead.feature_native_chapter_viewer.viewmodels.ChapterViewModel
 import com.melonhead.data_shared.models.ui.UIChapter
 import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.feature_native_chapter_viewer.ui.scenes.LongStripChapterScreen
+import com.melonhead.lib_core.scenes.MangaSummaryDialog
 import com.melonhead.lib_core.theme.MangadexFollowerTheme
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -25,9 +29,20 @@ internal class ChapterActivity: ComponentActivity() {
                 val page by viewModel.currentPage.collectAsState(initial = null)
                 val pages by viewModel.chapterData.collectAsState()
 
+                var showMangaModal by remember { mutableStateOf<UIManga?>(null) }
+                MangaSummaryDialog(manga = showMangaModal) {
+                    showMangaModal = null
+                }
+
+                val manga = viewModel.manga
+
                 if (viewModel.longStrip) {
                     LongStripChapterScreen(
                         allPages = pages,
+                        description = manga.description,
+                        onSummaryTapped = {
+                            showMangaModal = manga
+                        },
                         onCompletedChapter = {
                             viewModel.markAsRead()
                             finish()
@@ -35,12 +50,16 @@ internal class ChapterActivity: ComponentActivity() {
                     )
                 } else {
                     ChapterScreen(
+                        description = manga.description,
                         currentPage = page,
                         allPages = pages,
                         chapterTapAreaSize = viewModel.chapterTapAreaSize,
                         onCompletedChapter = {
                             viewModel.markAsRead()
                             finish()
+                        },
+                        onSummaryTapped = {
+                            showMangaModal = manga
                         },
                         nextPage = { viewModel.nextPage() },
                         prevPage = { viewModel.prevPage() }

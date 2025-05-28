@@ -17,7 +17,7 @@ internal fun LoadingChapterView(
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            CloseBanner("Loading...", onDoneTapped = onDoneTapped)
+            CloseBanner("Loading...", hasDescription = false, onDoneTapped = onDoneTapped, onSummaryTapped = { })
             LoadingScreen(refreshStatus = null)
         }
     }

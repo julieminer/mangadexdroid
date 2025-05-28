@@ -17,6 +17,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
@@ -24,6 +27,8 @@ import com.melonhead.feature_webview_chapter_viewer.viewmodels.WebViewViewModel
 import com.melonhead.data_shared.models.ui.UIChapter
 import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.lib_core.scenes.CloseBanner
+import com.melonhead.lib_core.scenes.MangaSummaryDialog
+import com.melonhead.lib_core.theme.MangadexFollowerTheme
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 internal class WebViewActivity : ComponentActivity() {
@@ -34,12 +39,20 @@ internal class WebViewActivity : ComponentActivity() {
 
 
         setContent {
-            com.melonhead.lib_core.theme.MangadexFollowerTheme {
+            MangadexFollowerTheme {
                 val url by viewModel.url.observeAsState()
+                val manga = viewModel.manga
+
+                var showMangaModal by remember { mutableStateOf<UIManga?>(null) }
+                MangaSummaryDialog(manga = showMangaModal,) {
+                    showMangaModal = null
+                }
 
                 WebView(url = url, callClose = {
                     viewModel.markAsRead()
                     finish()
+                }, description = manga.description, onSummaryTapped = {
+                    showMangaModal = manga
                 })
             }
         }
@@ -67,12 +80,12 @@ internal class WebViewActivity : ComponentActivity() {
 
 
 @Composable
-private fun WebView(url: String?, callClose: () -> Unit) {
+private fun WebView(url: String?, description: String?, callClose: () -> Unit, onSummaryTapped: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            CloseBanner(title = "", onDoneTapped = callClose)
+            CloseBanner(title = "", hasDescription = description != null, onDoneTapped = callClose, onSummaryTapped = onSummaryTapped)
 
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
@@ -112,6 +125,6 @@ private fun WebView(url: String?, callClose: () -> Unit) {
 @Composable
 private fun ScreenPreview() {
     Surface {
-        WebView("") { }
+        WebView("", description = null, callClose = { }) { }
     }
 }
