@@ -24,9 +24,9 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.melonhead.data_shared.models.ui.None
 import com.melonhead.data_shared.models.ui.UIChapter
 import com.melonhead.data_shared.models.ui.UIManga
+import com.melonhead.feature_manga_list.ui.scenes.dialogs.ChapterOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaRatingDialog
-import com.melonhead.feature_manga_list.ui.scenes.dialogs.MarkChapterReadDialog
 import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.feature_manga_list.viewmodels.MangaListViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -37,11 +37,14 @@ internal fun MangaListScreen(
     buildVersionName: String,
     buildVersionCode: String,
 ) {
-    var chapterReadStatusDialog by remember { mutableStateOf<Pair<UIManga, UIChapter>?>(null) }
-    MarkChapterReadDialog(
-        chapterReadStatusDialog,
-        onToggleChapterRead = { uiManga, chapter -> viewModel.toggleChapterRead(uiManga, chapter) },
-        onDismissed = { chapterReadStatusDialog = null }
+    var chapterOptionsDialog by remember { mutableStateOf<Pair<UIManga, UIChapter>?>(null) }
+
+    ChapterOptionsDialog(
+        chapterOptionsDialog,
+        onToggleRead = { manga, chapter, read -> viewModel.setChapterRead(manga, chapter, read) },
+        onToggleBlock = { chapter, blocked -> viewModel.setChapterBlocked(chapter, blocked) },
+        onClearCache = { manga, chapter -> viewModel.clearChapterCache(manga, chapter) },
+        onDismissed = { chapterOptionsDialog = null }
     )
 
     val showRatingDialog by viewModel.showRatingDialog.observeAsState()
@@ -182,7 +185,7 @@ internal fun MangaListScreen(
                                     viewModel.onChapterClicked(context, uiManga, uiChapter)
                                 },
                                 onChapterLongPressed = { uiManga, uiChapter ->
-                                    chapterReadStatusDialog = uiManga to uiChapter
+                                    chapterOptionsDialog = uiManga to uiChapter
                                 }
                             )
                         }

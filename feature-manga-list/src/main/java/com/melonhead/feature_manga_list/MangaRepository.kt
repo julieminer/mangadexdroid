@@ -93,6 +93,9 @@ internal class MangaRepositoryImpl(
                             is UserEvent.SetMarkChapterRead -> {
                                 markChapterRead(event.mangaId, event.chapterId, event.read)
                             }
+                            is UserEvent.SetChapterBlocked -> {
+                                markChapterBlocked(event.chapterId, event.blocked)
+                            }
                             is UserEvent.SetUseWebView -> {
                                 setUseWebview(event.mangaId, event.useWebView)
                             }
@@ -114,7 +117,7 @@ internal class MangaRepositoryImpl(
         // map the series and chapters into UIManga, sorted from most recent to least
         val uiManga = dbSeries.mapNotNull { manga ->
             var hasExternalChapters = false
-            val chapters = dbChapters.filter { it.mangaId == manga.id }.map { chapter ->
+            val chapters = dbChapters.filter { !it.blockedChapter }.filter { it.mangaId == manga.id }.map { chapter ->
                 val read = readMarkerDb.getEntityByChapter(chapter.mangaId, chapter.chapter)?.readStatus == true
                 hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
                 UIChapter(
@@ -123,6 +126,7 @@ internal class MangaRepositoryImpl(
                     title = chapter.chapterTitle,
                     createdDate = chapter.createdAt.epochSeconds,
                     read = read,
+                    blocked = chapter.blockedChapter,
                     externalUrl = chapter.externalUrl,
                     cachedPages = chapterCache.getChapterPageCountFromCache(manga.id, chapter.id)
                 )
@@ -211,7 +215,9 @@ internal class MangaRepositoryImpl(
     private suspend fun handleUnreadChapters() {
         mutableRefreshStatus.value = FetchingChapters
         val manga = mangaDb.getAllSync()
-        val newChapters = chapterDb.getAllSync().filter { readMarkerDb.isRead(it.mangaId, it.chapter) != true }
+        val newChapters = chapterDb.getAllSync()
+            .filter { readMarkerDb.isRead(it.mangaId, it.chapter) != true }
+            .filter { !it.blockedChapter }
         chapterCache.cacheImagesForChapters(manga, newChapters)
 
         if (appContext.isInForeground) return
@@ -323,6 +329,16 @@ internal class MangaRepositoryImpl(
                 ReadingStatus.Dropped -> {
                     // no-op
                 }
+            }
+        }
+    }
+
+    private fun markChapterBlocked(chapterId: String, blocked: Boolean) {
+        externalScope.launch {
+            val chapter = chapterDb.getChapterForId(chapterId).copy(blockedChapter = blocked)
+            chapterDb.update(chapter)
+            if (blocked) {
+                chapterCache.clearChapterFromCache(mangaId = chapter.mangaId, chapterId = chapter.id)
             }
         }
     }

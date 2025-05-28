@@ -6,7 +6,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 internal object MangaDBMigrations {
     val MIGRATION_1_2 = object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE manga ADD COLUMN if not exists status TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE manga ADD COLUMN status TEXT NOT NULL DEFAULT ''")
         }
     }
 
