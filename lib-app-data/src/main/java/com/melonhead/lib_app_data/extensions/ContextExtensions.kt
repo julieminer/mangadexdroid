@@ -1,3 +1,5 @@
+package com.melonhead.lib_app_data.extensions
+
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences

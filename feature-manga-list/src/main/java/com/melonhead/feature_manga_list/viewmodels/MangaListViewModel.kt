@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
+import androidx.core.net.toUri
 
 internal class MangaListViewModel(
     private val mangaRepository: MangaRepository,
@@ -118,7 +119,7 @@ internal class MangaListViewModel(
                 RenderStyle.Browser -> {
                     // mark chapter as read on tap only for browse style rendering
                     appEventsRepository.postEvent(UserEvent.SetMarkChapterRead(uiChapter.id, uiManga.id, !uiChapter.read!!))
-                    Intent(Intent.ACTION_VIEW).apply { data = Uri.parse(uiChapter.webAddress) }
+                    Intent(Intent.ACTION_VIEW).apply { data = uiChapter.webAddress.toUri() }
                 }
             }
 
