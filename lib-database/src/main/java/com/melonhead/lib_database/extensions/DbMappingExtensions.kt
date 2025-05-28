@@ -14,6 +14,7 @@ fun ChapterEntity.Companion.from(chapter: Chapter): ChapterEntity {
         chapter = chapter.attributes.chapter ?: "1",
         createdAt = chapter.attributes.createdAt,
         externalUrl = chapter.attributes.externalUrl,
+        blockedChapter = false
     )
 }
 

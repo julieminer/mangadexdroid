@@ -16,6 +16,7 @@ data class ChapterEntity(
     @ColumnInfo(name = "chapter") val chapter: String?,
     @ColumnInfo(name = "createdAt") val createdAt: Instant,
     @ColumnInfo(name = "externalUrl") val externalUrl: String?,
+    @ColumnInfo(name = "blockedChapter") val blockedChapter: Boolean,
 ) {
     // required for mapping functions
     companion object

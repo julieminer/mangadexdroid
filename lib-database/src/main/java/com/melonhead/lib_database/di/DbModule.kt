@@ -1,6 +1,7 @@
 package com.melonhead.lib_database.di
 
 import androidx.room.Room
+import com.melonhead.lib_database.chapter.ChapterDBMigrations
 import com.melonhead.lib_database.chapter.ChapterDatabase
 import com.melonhead.lib_database.manga.MangaDBMigrations
 import com.melonhead.lib_database.manga.MangaDatabase
@@ -12,6 +13,9 @@ val LibDbModule = module {
         Room.databaseBuilder(
             get(),
             ChapterDatabase::class.java, "chapter"
+        ).addMigrations(
+            ChapterDBMigrations.MIGRATION_1_2,
+            ChapterDBMigrations.MIGRATION_2_3,
         ).build()
     }
 
