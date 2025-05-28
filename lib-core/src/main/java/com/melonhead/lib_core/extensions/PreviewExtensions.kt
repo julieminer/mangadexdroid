@@ -27,14 +27,16 @@ object Previews {
             "101",
             "Test Title",
             Clock.System.now().epochSeconds,
-            true
+            true,
+            blocked = false,
         ),
         UIChapter(
             "",
             "102",
             "Test Title 2",
             Clock.System.now().epochSeconds,
-            false
+            false,
+            blocked = false,
         )
     )
 }

@@ -123,6 +123,7 @@ internal class MangaRepositoryImpl(
                     title = chapter.chapterTitle,
                     createdDate = chapter.createdAt.epochSeconds,
                     read = read,
+                    blocked = chapter.blockedChapter,
                     externalUrl = chapter.externalUrl,
                     cachedPages = chapterCache.getChapterPageCountFromCache(manga.id, chapter.id)
                 )
