@@ -8,9 +8,9 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.contentLength
 import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.core.isEmpty
 import io.ktor.utils.io.core.readBytes
 import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
 import java.io.File
 import kotlin.random.Random
 
@@ -64,8 +64,8 @@ suspend fun HttpClient.downloadFile(outputFile: File, url: String): Boolean {
         val channel: ByteReadChannel = httpResponse.body()
         while (!channel.isClosedForRead) {
             val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-            while (!packet.isEmpty) {
-                val bytes = packet.readBytes()
+            while (!packet.exhausted()) {
+                val bytes = packet.readByteArray()
                 outputFile.appendBytes(bytes)
             }
         }

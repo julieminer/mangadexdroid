@@ -118,7 +118,7 @@ internal class MangaListViewModel(
                 RenderStyle.WebView -> navigateToWebView(context, uiManga, uiChapter)
                 RenderStyle.Browser -> {
                     // mark chapter as read on tap only for browse style rendering
-                    appEventsRepository.postEvent(UserEvent.SetMarkChapterRead(uiChapter.id, uiManga.id, !uiChapter.read!!))
+                    appEventsRepository.postEvent(UserEvent.SetMarkChapterRead(uiChapter.id, uiManga.id, !uiChapter.read))
                     Intent(Intent.ACTION_VIEW).apply { data = uiChapter.webAddress.toUri() }
                 }
             }
