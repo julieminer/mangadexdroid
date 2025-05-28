@@ -93,6 +93,9 @@ internal class MangaRepositoryImpl(
                             is UserEvent.SetMarkChapterRead -> {
                                 markChapterRead(event.mangaId, event.chapterId, event.read)
                             }
+                            is UserEvent.SetChapterBlocked -> {
+                                markChapterBlocked(event.chapterId, event.blocked)
+                            }
                             is UserEvent.SetUseWebView -> {
                                 setUseWebview(event.mangaId, event.useWebView)
                             }
@@ -325,6 +328,13 @@ internal class MangaRepositoryImpl(
                     // no-op
                 }
             }
+        }
+    }
+
+    private fun markChapterBlocked(chapterId: String, blocked: Boolean) {
+        externalScope.launch {
+            val chapter = chapterDb.getChapterForId(chapterId).copy(blockedChapter = blocked)
+            chapterDb.update(chapter)
         }
     }
 
