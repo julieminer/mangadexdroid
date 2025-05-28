@@ -1,6 +1,6 @@
 [versions]
 androidPluginVersion = "8.10.0"
-crashlyticsGradlePluginVersion = "3.0.2"
+crashlyticsGradlePluginVersion = "3.0.3"
 googleServicesPluginVersion = "4.4.2"
 gradlePluginVersion = "8.10.0"
 kotlinGradlePluginVersion = "2.0.0"
