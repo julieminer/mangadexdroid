@@ -215,7 +215,9 @@ internal class MangaRepositoryImpl(
     private suspend fun handleUnreadChapters() {
         mutableRefreshStatus.value = FetchingChapters
         val manga = mangaDb.getAllSync()
-        val newChapters = chapterDb.getAllSync().filter { readMarkerDb.isRead(it.mangaId, it.chapter) != true }
+        val newChapters = chapterDb.getAllSync()
+            .filter { readMarkerDb.isRead(it.mangaId, it.chapter) != true }
+            .filter { !it.blockedChapter }
         chapterCache.cacheImagesForChapters(manga, newChapters)
 
         if (appContext.isInForeground) return
