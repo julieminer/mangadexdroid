@@ -114,7 +114,7 @@ internal class MangaRepositoryImpl(
         // map the series and chapters into UIManga, sorted from most recent to least
         val uiManga = dbSeries.mapNotNull { manga ->
             var hasExternalChapters = false
-            val chapters = dbChapters.filter { it.mangaId == manga.id }.map { chapter ->
+            val chapters = dbChapters.filter { !it.blockedChapter }.filter { it.mangaId == manga.id }.map { chapter ->
                 val read = readMarkerDb.getEntityByChapter(chapter.mangaId, chapter.chapter)?.readStatus == true
                 hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
                 UIChapter(
