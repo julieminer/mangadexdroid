@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace 'com.melonhead.mangadexfollower'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.melonhead.mangadexfollower"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 38
         versionName "1." + versionCode
 
