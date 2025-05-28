@@ -35,27 +35,36 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.melonhead.feature_authentication.BuildConfig
 import com.melonhead.feature_authentication.R
+import com.melonhead.lib_core.theme.MangadexFollowerTheme
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun LoginScreen(
-    onLoginTapped: (email: String, password: String) -> Unit
+internal fun OauthLoginScreen(
+    onLoginTapped: (email: String, password: String, clientId: String, clientSecret: String,) -> Unit,
+    storedEmail: String?,
+    storedClientId: String?,
+    storedClientSecret: String?,
 ) {
-    var emailField by rememberSaveable { mutableStateOf("") }
+    var emailField by rememberSaveable { mutableStateOf(storedEmail ?: "") }
     var passwordField by rememberSaveable { mutableStateOf("") }
+    var apiClientField by rememberSaveable { mutableStateOf(storedClientId ?: "") }
+    var apiSecretField by rememberSaveable { mutableStateOf(storedClientSecret ?: "") }
     var loggingIn by rememberSaveable { mutableStateOf(false) }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
+    var isApiSecretVisible by rememberSaveable { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     if (BuildConfig.DEBUG) {
         LaunchedEffect(key1 = true) {
             emailField = BuildConfig.DEBUG_EMAIL
             passwordField = BuildConfig.DEBUG_PASSWORD
+            apiClientField = BuildConfig.DEBUG_CLIENT_ID
+            apiSecretField = BuildConfig.DEBUG_CLIENT_SECRET
         }
     }
 
     fun signIn() {
-        onLoginTapped(emailField, passwordField)
+        onLoginTapped(emailField, passwordField, apiClientField, apiSecretField)
         loggingIn = true
         keyboardController?.hide()
     }
@@ -112,7 +121,7 @@ internal fun LoginScreen(
         OutlinedTextField(value = passwordField,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Password),
             keyboardActions = KeyboardActions(onDone = {
-                signIn()
+                focusManager.moveFocus(FocusDirection.Down)
             }),
             onValueChange = { passwordField = it },
             label = { Text("Password") },
@@ -149,8 +158,76 @@ internal fun LoginScreen(
                     }
                 }
         )
+
+
+        OutlinedTextField(value = apiClientField,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next, keyboardType = KeyboardType.Text),
+            keyboardActions = KeyboardActions(onNext = {
+                focusManager.moveFocus(FocusDirection.Down)
+            }),
+            onValueChange = { apiClientField = it },
+            label = { Text("Api Client") },
+            singleLine = true,
+            modifier = Modifier
+                .padding(bottom = 8.dp)
+                .onGloballyPositioned {
+//                    emailNode.boundingBox = it.boundsInWindow()
+                }
+//                .onFocusChanged { focusState ->
+//                    autoFill?.run {
+//                        if (focusState.isFocused) {
+//                            requestAutofillForNode(emailNode)
+//                        } else {
+//                            cancelAutofillForNode(emailNode)
+//                        }
+//                    }
+//                }
+        )
+        OutlinedTextField(value = apiSecretField,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Password),
+            keyboardActions = KeyboardActions(onDone = {
+                signIn()
+            }),
+            onValueChange = { apiSecretField = it },
+            label = { Text("Api Secret") },
+            singleLine = true,
+            visualTransformation = if (isApiSecretVisible)
+                VisualTransformation.None
+            else
+                PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = {
+                    isApiSecretVisible = !isApiSecretVisible
+                }) {
+                    Icon(
+                        imageVector = if (isApiSecretVisible)
+                            Icons.Filled.Visibility
+                        else
+                            Icons.Filled.VisibilityOff,
+                        contentDescription = "Api Secret Visibility"
+                    )
+                }
+            },
+            modifier = Modifier
+                .padding(bottom = 24.dp)
+                .onGloballyPositioned {
+//                    passwordNode.boundingBox = it.boundsInWindow()
+                }
+                .onFocusChanged { focusState ->
+//                    autoFill?.run {
+//                        if (focusState.isFocused) {
+//                            requestAutofillForNode(passwordNode)
+//                        } else {
+//                            cancelAutofillForNode(passwordNode)
+//                        }
+//                    }
+                }
+        )
+
+
+
         Button(enabled = !loggingIn, onClick = {
-            if (emailField.isNotBlank() && passwordField.isNotBlank()) {
+            if (emailField.isNotBlank() && passwordField.isNotBlank() && apiClientField.isNotBlank() && apiSecretField.isNotBlank()) {
                 signIn()
             }
         }) {
@@ -170,7 +247,7 @@ internal fun LoginScreen(
 @Preview(showBackground = true)
 @Composable
 private fun LoginPreview() {
-    com.melonhead.lib_core.theme.MangadexFollowerTheme {
-        LoginScreen(onLoginTapped = { _, _ -> })
+    MangadexFollowerTheme {
+        OauthLoginScreen(onLoginTapped = { _, _, _, _ -> }, "", "", "")
     }
 }
