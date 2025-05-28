@@ -291,45 +291,65 @@ internal class MangaRepositoryImpl(
     private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) {
         externalScope.launch {
             val manga = mangaDb.getMangaById(mangaId)
+
+            suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean) {
+                val entity = readMarkerDb.getEntityByChapter(
+                    mangaId = mangaId,
+                    chapter = chapter.chapter
+                ) ?: return
+
+                if (read) {
+                    newChapterNotificationChannel.dismissNotification(context, mangaId, chapterId)
+                    chapterCache.clearChapterFromCache(mangaId = mangaId, chapterId = chapterId)
+                }
+
+                readMarkerDb.update(entity.copy(readStatus = read))
+                mangaService.changeReadStatus(
+                    mangaId = mangaId,
+                    chapterId = chapterId,
+                    readStatus = read
+                )
+
+                if (isDuplicate) return
+
+                val readingStatus = mangaService.getSeriesReadingStatus(mangaId) ?: return
+                when (readingStatus) {
+                    ReadingStatus.ReReading,
+                    ReadingStatus.Reading,
+                        -> {
+                        if (read && manga?.lastChapter == chapter.chapter && appData.autoMarkMangaCompleted.firstOrNull() == true) {
+                            mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Completed)
+                            appEventsRepository.postEvent(SystemLogicEvents.PromptMangaRating(mangaId))
+                        }
+                    }
+
+                    ReadingStatus.OnHold -> {
+                        if (read && appData.autoMarkMangaReading.firstOrNull() == true) {
+                            mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Reading)
+                        }
+                    }
+
+                    ReadingStatus.Completed,
+                    ReadingStatus.PlanToRead,
+                    ReadingStatus.Dropped -> {
+                        // no-op
+                    }
+                }
+            }
+
             val chapter = chapterDb.getChapterForId(chapterId)
-            val entity = readMarkerDb.getEntityByChapter(
-                mangaId = mangaId,
-                chapter = chapter.chapter
-            ) ?: return@launch
-            if (read) {
-                newChapterNotificationChannel.dismissNotification(context, mangaId, chapterId)
-                chapterCache.clearChapterFromCache(mangaId = mangaId, chapterId = chapterId)
+            val chapterTitle = chapter.chapterTitle
+
+            if (chapterTitle != null) {
+                val chapters = chapterDb.getChaptersByTitle(chapterTitle)
+                chapters.forEach {
+                    internalMarkChapterAsRead(it, isDuplicate = true)
+                }
+            } else {
+                internalMarkChapterAsRead(chapter, isDuplicate = false)
             }
-            readMarkerDb.update(entity.copy(readStatus = read))
-            mangaService.changeReadStatus(
-                mangaId = mangaId,
-                chapterId = chapterId,
-                readStatus = read
-            )
 
-            val readingStatus = mangaService.getSeriesReadingStatus(mangaId) ?: return@launch
-            when (readingStatus) {
-                ReadingStatus.ReReading,
-                ReadingStatus.Reading,
-                -> {
-                    if (read && manga?.lastChapter == chapter.chapter && appData.autoMarkMangaCompleted.firstOrNull() == true) {
-                        mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Completed)
-                        appEventsRepository.postEvent(SystemLogicEvents.PromptMangaRating(mangaId))
-                    }
-                }
 
-                ReadingStatus.OnHold -> {
-                    if (read && appData.autoMarkMangaReading.firstOrNull() == true) {
-                        mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Reading)
-                    }
-                }
-
-                ReadingStatus.Completed,
-                ReadingStatus.PlanToRead,
-                ReadingStatus.Dropped -> {
-                    // no-op
-                }
-            }
         }
     }
 
