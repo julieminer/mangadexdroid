@@ -1,0 +1,8 @@
+android {
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+}
+
+apply from: "$rootProject.projectDir/android-module.gradle"
