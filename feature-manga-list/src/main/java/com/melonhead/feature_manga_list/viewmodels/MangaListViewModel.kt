@@ -127,8 +127,10 @@ internal class MangaListViewModel(
         }
     }
 
-    fun toggleChapterRead(uiManga: UIManga, uiChapter: UIChapter) = viewModelScope.launch(Dispatchers.IO) {
-        appEventsRepository.postEvent(UserEvent.SetMarkChapterRead(uiChapter.id, uiManga.id, !uiChapter.read))
+    fun setChapterRead(uiManga: UIManga, uiChapter: UIChapter, read: Boolean) {
+        appEventsRepository.postEvent(UserEvent.SetMarkChapterRead(uiChapter.id, uiManga.id, read))
+    }
+
     fun setChapterBlocked(uiChapter: UIChapter, blocked: Boolean) {
         appEventsRepository.postEvent(UserEvent.SetChapterBlocked(uiChapter.id, blocked))
     }
