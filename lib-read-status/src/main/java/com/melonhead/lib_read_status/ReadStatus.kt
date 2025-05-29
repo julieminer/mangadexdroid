@@ -70,7 +70,7 @@ internal class ReadStatusImpl(
         }
     }
 
-    // TODO: some of this logic should be separate from readstatus 
+    // TODO: some of this logic should be separate from readstatus
     override suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         Clog.i("refresh")
 
@@ -84,6 +84,13 @@ internal class ReadStatusImpl(
                 val readStatus = readMarkerDb.isRead(it.mangaId, it.chapter)
                 readStatus == null && readChapters.contains(it.id)
             }
+
+        // remove read items from readQueueDB
+        // handles edge case where item is marked as read in another client
+        val readQueue = readQueueDb.getAllSync()
+        val completedQueue = readQueue.filter { it.chapterId in chaptersToUpdate.map { it.id } }
+        Clog.i("Clearing ${completedQueue.size} chapters from read queue")
+        readQueueDb.deleteAll(*completedQueue.toTypedArray())
 
         if (chaptersToUpdate.isEmpty()) {
             sendCompletedChapters()
