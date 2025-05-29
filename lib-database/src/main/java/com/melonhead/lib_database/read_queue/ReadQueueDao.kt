@@ -6,18 +6,23 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReadQueueDao {
     @Query("SELECT * FROM $TABLE_NAME")
-    fun getAll(): Flow<List<ReadQueueEntity>>
+    suspend fun getAllSync(): List<ReadQueueEntity>
+
+    @Query("SELECT * FROM $TABLE_NAME where chapterId = :chapterId")
+    suspend fun get(chapterId: String): ReadQueueEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(vararg readQueueEntity: ReadQueueEntity)
+    suspend fun insert(readQueueEntity: ReadQueueEntity)
 
     @Delete
-    suspend fun delete(vararg readQueueEntity: ReadQueueEntity)
+    suspend fun deleteAll(vararg readQueueEntity: ReadQueueEntity)
+
+    @Query("DELETE FROM $TABLE_NAME where chapterId = :chapterId")
+    suspend fun delete(chapterId: String)
 
     @Update
     suspend fun update(vararg readQueueEntity: ReadQueueEntity)
