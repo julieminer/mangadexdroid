@@ -113,7 +113,6 @@ internal class ReadStatusImpl(
 
                 if (read) {
                     newChapterNotificationChannel.dismissNotification(context, mangaId, chapterId)
-                    chapterCache.clearChapterFromCache(mangaId = mangaId, chapterId = chapterId)
                 }
 
                 readMarkerDb.update(entity.copy(readStatus = read))

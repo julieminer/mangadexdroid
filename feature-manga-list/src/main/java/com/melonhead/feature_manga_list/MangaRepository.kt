@@ -256,9 +256,6 @@ internal class MangaRepositoryImpl(
         externalScope.launch {
             val chapter = chapterDb.getChapterForId(chapterId).copy(blockedChapter = blocked)
             chapterDb.update(chapter)
-            if (blocked) {
-                chapterCache.clearChapterFromCache(mangaId = chapter.mangaId, chapterId = chapter.id)
-            }
         }
     }
 
