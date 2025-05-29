@@ -124,7 +124,7 @@ internal class ReadStatusImpl(
                 val success = mangaService.changeReadStatus(
                     mangaId = chapter.mangaId,
                     chapterId = chapter.id,
-                    readStatus = true
+                    readStatus = queue.read
                 )
                 if (success) {
                     readQueueDb.delete(chapter.id)
@@ -166,6 +166,7 @@ internal class ReadStatusImpl(
                     readQueueDb.insert(ReadQueueEntity(chapterId = chapterId, retryCount = 0, read = read))
                 } else {
                     Clog.i("ReadStatus.markChapterRead: updating $chapterId in readQueueDB to read = $read")
+                    readQueueDb.update(readQueueEntity.copy(read = read))
                 }
 
                 readMarkerDb.update(entity.copy(readStatus = read))
