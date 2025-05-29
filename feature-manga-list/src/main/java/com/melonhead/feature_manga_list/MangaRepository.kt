@@ -204,6 +204,7 @@ internal class MangaRepositoryImpl(
         val manga = mangaDb.getAllSync()
         val chapters = chapterDb.getAllSync()
         readStatus.refresh(manga, chapters)
+        handleUnreadChapters()
 
         mutableRefreshStatus.value = MangaRefreshStatus.None
         appData.updateLastRefreshDate()
