@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace 'com.melonhead.lib_chapter_cache'
+    namespace 'com.melonhead.lib_read_status'
 }
 
 dependencies {

@@ -1,4 +1,4 @@
-package com.melonhead.lib_chapter_cache.di
+package com.melonhead.lib_read_status.di
 
 import com.melonhead.lib_chapter_cache.ReadStatus
 import com.melonhead.lib_chapter_cache.ReadStatusImpl

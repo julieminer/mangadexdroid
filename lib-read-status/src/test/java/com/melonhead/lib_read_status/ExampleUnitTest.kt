@@ -1,4 +1,4 @@
-package com.melonhead.lib_chapter_cache
+package com.melonhead.lib_read_status
 
 import org.junit.Test
 

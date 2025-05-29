@@ -1,4 +1,4 @@
-package com.melonhead.lib_chapter_cache
+package com.melonhead.lib_read_status
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
