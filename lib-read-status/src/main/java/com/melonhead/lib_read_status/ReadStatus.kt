@@ -101,6 +101,32 @@ internal class ReadStatusImpl(
         readMarkerDb.update(*readMarkersToUpdate.toTypedArray())
     }
 
+    private fun sendCompletedChapters() {
+        externalScope.launch {
+            val readQueue = readQueueDb.getAllSync()
+            val chapters = readQueue.map { it to chapterDb.getChapterForId(it.chapterId) }
+
+            Clog.i("Sending ${chapters.size} completed chapters to server")
+
+            chapters.forEach { (queue, chapter) ->
+                val success = mangaService.changeReadStatus(
+                    mangaId = chapter.mangaId,
+                    chapterId = chapter.id,
+                    readStatus = true
+                )
+                if (success) {
+                    readQueueDb.delete(chapter.id)
+                } else if (queue.retryCount >= 3) {
+                    Clog.w("Failed to send completed chapter to server 3 times, deleting from queue")
+                    readQueueDb.delete(chapter.id)
+                } else {
+                    Clog.i("Failed to send completed chapter ${chapter.id} to server, will retry later")
+                    readQueueDb.update(queue.copy(retryCount = queue.retryCount + 1))
+                }
+            }
+        }
+    }
+
     override fun isRead(chapter: ChapterEntity): Boolean {
         return readMarkerDb.isRead(chapter.mangaId, chapter.chapter) == true
     }
