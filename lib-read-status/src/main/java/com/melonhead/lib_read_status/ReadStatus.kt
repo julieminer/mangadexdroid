@@ -86,6 +86,7 @@ internal class ReadStatusImpl(
             }
 
         if (chaptersToUpdate.isEmpty()) {
+            sendCompletedChapters()
             return
         }
 
@@ -99,6 +100,8 @@ internal class ReadStatusImpl(
             }
             .map { ReadMarkerEntity.from(it, true) }
         readMarkerDb.update(*readMarkersToUpdate.toTypedArray())
+
+        sendCompletedChapters()
     }
 
     private fun sendCompletedChapters() {
