@@ -42,7 +42,7 @@ internal fun MangaListScreen(
     ChapterOptionsDialog(
         chapterOptionsDialog,
         onToggleRead = { manga, chapter, read -> viewModel.setChapterRead(manga, chapter, read) },
-        onToggleBlock = { chapter, blocked -> viewModel.setChapterBlocked(chapter, blocked) },
+        onToggleBlock = { manga, chapter, blocked -> viewModel.setChapterBlocked(manga, chapter, blocked) },
         onClearCache = { manga, chapter -> viewModel.clearChapterCache(manga, chapter) },
         onDismissed = { chapterOptionsDialog = null }
     )
