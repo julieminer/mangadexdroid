@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.melonhead.data_shared.models.ui.None
+import com.melonhead.data_shared.models.ui.MangaRefreshStatus
 import com.melonhead.data_shared.models.ui.UIChapter
 import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.ChapterOptionsDialog
@@ -69,7 +69,7 @@ internal fun MangaListScreen(
     val context = LocalContext.current
 
     val manga by viewModel.manga.observeAsState(listOf())
-    val refreshStatus by viewModel.refreshStatus.observeAsState(None)
+    val refreshStatus by viewModel.refreshStatus.observeAsState(MangaRefreshStatus.None)
     val refreshText by viewModel.refreshText.observeAsState("")
     val readMangaCount = viewModel.readMangaCount
 
@@ -93,7 +93,7 @@ internal fun MangaListScreen(
         LaunchedEffect(refreshStatus) { justPulledRefresh = false }
 
         Column {
-            AnimatedVisibility(visible = refreshStatus !is None || isRefreshing.isRefreshing || justPulledRefresh) {
+            AnimatedVisibility(visible = refreshStatus !is MangaRefreshStatus.None || isRefreshing.isRefreshing || justPulledRefresh) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -132,7 +132,7 @@ internal fun MangaListScreen(
                     justPulledRefresh = true
                     viewModel.refreshContent()
                 },
-                swipeEnabled = (refreshStatus is None) && !isRefreshing.isRefreshing && !justPulledRefresh
+                swipeEnabled = (refreshStatus is MangaRefreshStatus.None) && !isRefreshing.isRefreshing && !justPulledRefresh
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -140,7 +140,7 @@ internal fun MangaListScreen(
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     item {
-                        AnimatedVisibility(visible = refreshStatus is None && !isRefreshing.isRefreshing) {
+                        AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing) {
                             Text(text = "Last Refresh: $refreshText",
                                 modifier = Modifier
                                     .fillMaxWidth()

@@ -3,7 +3,6 @@ package com.melonhead.feature_manga_list
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
 import com.melonhead.data_at_home.AtHomeService
-import com.melonhead.data_manga.models.ReadingStatus
 import com.melonhead.data_manga.services.MangaService
 import com.melonhead.data_rating.services.RatingService
 import com.melonhead.data_shared.models.ui.*
@@ -61,7 +60,7 @@ internal class MangaRepositoryImpl(
         generateUIManga(dbSeries, dbChapters)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
 
-    private val mutableRefreshStatus = MutableStateFlow<MangaRefreshStatus>(None)
+    private val mutableRefreshStatus = MutableStateFlow<MangaRefreshStatus>(MangaRefreshStatus.None)
     override val refreshStatus = mutableRefreshStatus.shareIn(externalScope, replay = 0, started = SharingStarted.WhileSubscribed())
 
     private var isLoggedIn: Boolean = false
@@ -170,7 +169,7 @@ internal class MangaRepositoryImpl(
 
         Clog.i("refreshManga")
 
-        mutableRefreshStatus.value = Following
+        mutableRefreshStatus.value = MangaRefreshStatus.Following
         // fetch chapters from server
         val chaptersResponse = userService.getFollowedChapters()
         val chapterEntities = chaptersResponse.map { ChapterEntity.from(it) }
@@ -179,7 +178,7 @@ internal class MangaRepositoryImpl(
         Clog.i("New chapters: ${newChapters.count()}")
 
         if (newChapters.isNotEmpty()) {
-            mutableRefreshStatus.value = MangaSeries
+            mutableRefreshStatus.value = MangaRefreshStatus.MangaSeries
             // add chapters to DB
             chapterDb.insertAll(*newChapters.toTypedArray())
 
@@ -201,11 +200,11 @@ internal class MangaRepositoryImpl(
             }
         }
 
-        mutableRefreshStatus.value = ReadStatus
         // refresh read status for series
         refreshReadStatus()
+        mutableRefreshStatus.value = MangaRefreshStatus.ReadStatus
 
-        mutableRefreshStatus.value = None
+        mutableRefreshStatus.value = MangaRefreshStatus.None
         appData.updateLastRefreshDate()
 
         // mark refresh as completed
@@ -213,7 +212,7 @@ internal class MangaRepositoryImpl(
     }
 
     private suspend fun handleUnreadChapters() {
-        mutableRefreshStatus.value = FetchingChapters
+        mutableRefreshStatus.value = MangaRefreshStatus.FetchingChapters
         val manga = mangaDb.getAllSync()
         val newChapters = chapterDb.getAllSync()
             .filter { readMarkerDb.isRead(it.mangaId, it.chapter) != true }
