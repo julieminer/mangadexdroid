@@ -22,7 +22,7 @@ import io.ktor.http.contentType
 interface MangaService {
     suspend fun getManga(mangaIds: List<String>): List<Manga>
     suspend fun getReadChapters(mangaIds: List<String>): List<String>
-    suspend fun changeReadStatus(mangaId: String, chapterId: String, readStatus: Boolean)
+    suspend fun changeReadStatus(mangaId: String, chapterId: String, readStatus: Boolean): Boolean
     suspend fun getSeriesReadingStatus(mangaId: String): ReadingStatus?
     suspend fun changeSeriesReadingStatus(mangaId: String, readingStatus: ReadingStatus)
 }
@@ -78,10 +78,10 @@ internal class MangaServiceImpl(
         return allChapters
     }
 
-    override suspend fun changeReadStatus(mangaId: String, chapterId: String, readStatus: Boolean) {
-        val session = appData.getSession() ?: return
+    override suspend fun changeReadStatus(mangaId: String, chapterId: String, readStatus: Boolean): Boolean {
+        val session = appData.getSession() ?: return false
         Clog.i("changeReadStatus: chapter $chapterId readStatus $readStatus")
-        client.catchingSuccess("changeReadStatus") {
+        return client.catchingSuccess("changeReadStatus") {
             client.post(MANGA_READ_CHAPTER_MARKERS_URL.replace(ID_PLACEHOLDER, mangaId)) {
                 headers {
                     contentType(ContentType.Application.Json)
