@@ -47,7 +47,7 @@ internal class ReadStatusImpl(
         get() = internalReadMarker
 
     init {
-        Clog.i("MangaRepository init")
+        Clog.i("ReadStatus init")
         externalScope.launch {
             // refresh manga on login
             try {
@@ -70,6 +70,7 @@ internal class ReadStatusImpl(
         }
     }
 
+    // TODO: some of this logic should be separate from readstatus 
     override suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         Clog.i("refresh")
 
@@ -83,6 +84,13 @@ internal class ReadStatusImpl(
                 val readStatus = readMarkerDb.isRead(it.mangaId, it.chapter)
                 readStatus == null && readChapters.contains(it.id)
             }
+
+        if (chaptersToUpdate.isEmpty()) {
+            return
+        }
+
+        // update the db with the new entities
+        chapterDb.update(*chaptersToUpdate.toTypedArray())
 
         val readMarkersToUpdate = chaptersToUpdate
             .filter {
@@ -99,6 +107,8 @@ internal class ReadStatusImpl(
 
     private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) {
         externalScope.launch {
+            Clog.i("markChapterRead: mangaId: $mangaId, chapterId: $chapterId, read: $read")
+
             val manga = mangaDb.getMangaById(mangaId)
 
             suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean) {
