@@ -25,14 +25,14 @@ import com.melonhead.lib_app_data.AppData
 
 interface ReadStatus {
     suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>)
-    val readMarkers: Flow<List<ReadQueueEntity>>
+    val readMarkers: Flow<List<ReadMarkerEntity>>
     fun isRead(chapter: ChapterEntity): Boolean
 }
 
 internal class ReadStatusImpl(
     private val context: Context,
     private val externalScope: CoroutineScope,
-    private val readStatusDb: ReadQueueDao,
+    private val readQueueDb: ReadQueueDao,
     private val readMarkerDb: ReadMarkerDao,
     private val appData: AppData,
     private val mangaDb: MangaDao,
@@ -42,8 +42,8 @@ internal class ReadStatusImpl(
     private val newChapterNotificationChannel: NewChapterNotificationChannel,
 ) : ReadStatus {
 
-    private val internalReadMarker = readStatusDb.getAll()
-    override val readMarkers: Flow<List<ReadQueueEntity>>
+    private val internalReadMarker = readMarkerDb.getAll()
+    override val readMarkers: Flow<List<ReadMarkerEntity>>
         get() = internalReadMarker
 
     init {
