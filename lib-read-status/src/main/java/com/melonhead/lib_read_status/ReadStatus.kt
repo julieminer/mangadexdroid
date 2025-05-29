@@ -117,23 +117,19 @@ internal class ReadStatusImpl(
                     chapter = chapter.chapter
                 ) ?: return
 
-                // TODO: notification event
-
                 if (read) {
+                    // TODO: notification event
                     newChapterNotificationChannel.dismissNotification(context, mangaId, chapterId)
                 }
 
+                val readQueueEntity = readQueueDb.get(chapterId)
+                if (readQueueEntity == null) {
+                    readQueueDb.insert(ReadQueueEntity(chapterId = chapterId, retryCount = 0, read = read))
+                }
+
                 readMarkerDb.update(entity.copy(readStatus = read))
-                mangaService.changeReadStatus(
-                    mangaId = mangaId,
-                    chapterId = chapterId,
-                    readStatus = read
-                )
-
                 if (isDuplicate) return
-
-                // TODO: consider using logic event
-
+                // TODO: consider using logic event?
                 val readingStatus = mangaService.getSeriesReadingStatus(mangaId) ?: return
                 when (readingStatus) {
                     ReadingStatus.ReReading,
