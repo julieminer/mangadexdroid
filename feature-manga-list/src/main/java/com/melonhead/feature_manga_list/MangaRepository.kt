@@ -11,17 +11,16 @@ import com.melonhead.lib_app_context.AppContext
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.*
-import com.melonhead.lib_chapter_cache.ChapterCache
+import com.melonhead.lib_read_status.ReadStatus
 import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
 import com.melonhead.lib_database.extensions.from
 import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
-import com.melonhead.lib_database.readmarkers.ReadMarkerDao
-import com.melonhead.lib_database.readmarkers.ReadMarkerEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_notifications.NewChapterNotificationChannel
+import com.melonhead.lib_chapter_cache.ChapterCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.future.await
@@ -42,7 +41,7 @@ internal class MangaRepositoryImpl(
     private val atHomeService: AtHomeService,
     private val chapterDb: ChapterDao,
     private val mangaDb: MangaDao,
-    private val readMarkerDb: ReadMarkerDao,
+    private val readStatus: ReadStatus,
     private val context: Context,
     private val chapterCache: ChapterCache,
     private val appEventsRepository: AppEventsRepository,
@@ -56,7 +55,7 @@ internal class MangaRepositoryImpl(
     }
 
     // combine all manga series and chapters
-    override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readMarkerDb.allMarkers(), chapterCache.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
+    override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatus.readMarkers, chapterCache.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
         generateUIManga(dbSeries, dbChapters)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
 
@@ -90,7 +89,7 @@ internal class MangaRepositoryImpl(
                                 refreshMangaThrottled(event)
                             }
                             is UserEvent.SetMarkChapterRead -> {
-                                markChapterRead(event.mangaId, event.chapterId, event.read)
+//                                markChapterRead(event.mangaId, event.chapterId, event.read)
                             }
                             is UserEvent.SetChapterBlocked -> {
                                 markChapterBlocked(event.chapterId, event.blocked)
@@ -117,7 +116,7 @@ internal class MangaRepositoryImpl(
         val uiManga = dbSeries.mapNotNull { manga ->
             var hasExternalChapters = false
             val chapters = dbChapters.filter { !it.blockedChapter }.filter { it.mangaId == manga.id }.map { chapter ->
-                val read = readMarkerDb.getEntityByChapter(chapter.mangaId, chapter.chapter)?.readStatus == true
+                val read = readStatus.isRead(chapter) // readMarkerDb.getEntityByChapter(chapter.mangaId, chapter.chapter)?.readStatus == true
                 hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
                 UIChapter(
                     id = chapter.id,
@@ -200,9 +199,11 @@ internal class MangaRepositoryImpl(
             }
         }
 
-        // refresh read status for series
-        refreshReadStatus()
         mutableRefreshStatus.value = MangaRefreshStatus.ReadStatus
+
+        val manga = mangaDb.getAllSync()
+        val chapters = chapterDb.getAllSync()
+        readStatus.refresh(manga, chapters)
 
         mutableRefreshStatus.value = MangaRefreshStatus.None
         appData.updateLastRefreshDate()
@@ -215,7 +216,7 @@ internal class MangaRepositoryImpl(
         mutableRefreshStatus.value = MangaRefreshStatus.FetchingChapters
         val manga = mangaDb.getAllSync()
         val newChapters = chapterDb.getAllSync()
-            .filter { readMarkerDb.isRead(it.mangaId, it.chapter) != true }
+            .filter { !readStatus.isRead(it) }
             .filter { !it.blockedChapter }
         chapterCache.cacheImagesForChapters(manga, newChapters)
 
@@ -227,43 +228,6 @@ internal class MangaRepositoryImpl(
 
         val notifyChapters = generateUIManga(manga, newChapters)
         newChapterNotificationChannel.post(context, notifyChapters, installDateSeconds)
-    }
-
-    private suspend fun refreshReadStatus() {
-        Clog.i("refreshReadStatus")
-        val manga = mangaDb.getAllSync()
-        val chapters = chapterDb.getAllSync()
-
-        // ensure all chapters have read markers
-        val readMarkers = chapters.map { ReadMarkerEntity.from(it, null) }
-        readMarkerDb.insertAll(*readMarkers.toTypedArray())
-
-        val readChapters = mangaService.getReadChapters(manga.map { it.id })
-        val chaptersToUpdate = chapters
-            // filter out chapters already marked as read in the db
-            .filter {
-                val readStatus = readMarkerDb.isRead(it.mangaId, it.chapter)
-                readStatus == null && readChapters.contains(it.id)
-            }
-
-        if (chaptersToUpdate.isEmpty()) {
-            handleUnreadChapters()
-            return
-        }
-
-        // update the db with the new entities
-        chapterDb.update(*chaptersToUpdate.toTypedArray())
-
-        val readMarkersToUpdate = chaptersToUpdate
-            .filter {
-                val readStatus = readMarkerDb.isRead(it.mangaId, it.chapter)
-                readStatus == null
-            }
-            .map { ReadMarkerEntity.from(it, true) }
-        readMarkerDb.update(*readMarkersToUpdate.toTypedArray())
-
-        // notify user of new chapters
-        handleUnreadChapters()
     }
 
     // currently trying to deprecate this function, and use chapterCache directly
@@ -284,71 +248,6 @@ internal class MangaRepositoryImpl(
     override fun rateManga(mangaId: String, rating: Int) {
         externalScope.launch {
             ratingService.setRating(mangaId, rating)
-        }
-    }
-
-    private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) {
-        externalScope.launch {
-            val manga = mangaDb.getMangaById(mangaId)
-
-            suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean) {
-                val entity = readMarkerDb.getEntityByChapter(
-                    mangaId = mangaId,
-                    chapter = chapter.chapter
-                ) ?: return
-
-                if (read) {
-                    newChapterNotificationChannel.dismissNotification(context, mangaId, chapterId)
-                    chapterCache.clearChapterFromCache(mangaId = mangaId, chapterId = chapterId)
-                }
-
-                readMarkerDb.update(entity.copy(readStatus = read))
-                mangaService.changeReadStatus(
-                    mangaId = mangaId,
-                    chapterId = chapterId,
-                    readStatus = read
-                )
-
-                if (isDuplicate) return
-
-                val readingStatus = mangaService.getSeriesReadingStatus(mangaId) ?: return
-                when (readingStatus) {
-                    ReadingStatus.ReReading,
-                    ReadingStatus.Reading,
-                        -> {
-                        if (read && manga?.lastChapter == chapter.chapter && appData.autoMarkMangaCompleted.firstOrNull() == true) {
-                            mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Completed)
-                            appEventsRepository.postEvent(SystemLogicEvents.PromptMangaRating(mangaId))
-                        }
-                    }
-
-                    ReadingStatus.OnHold -> {
-                        if (read && appData.autoMarkMangaReading.firstOrNull() == true) {
-                            mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Reading)
-                        }
-                    }
-
-                    ReadingStatus.Completed,
-                    ReadingStatus.PlanToRead,
-                    ReadingStatus.Dropped -> {
-                        // no-op
-                    }
-                }
-            }
-
-            val chapter = chapterDb.getChapterForId(chapterId)
-            val chapterTitle = chapter.chapterTitle
-
-            if (chapterTitle != null) {
-                val chapters = chapterDb.getChaptersByTitle(chapterTitle)
-                chapters.forEach {
-                    internalMarkChapterAsRead(it, isDuplicate = true)
-                }
-            } else {
-                internalMarkChapterAsRead(chapter, isDuplicate = false)
-            }
-
-
         }
     }
 

@@ -23,6 +23,7 @@ dependencies {
     implementation project(":lib-notifications")
     implementation project(":lib-app-events")
     implementation project(':lib-chapter-cache')
+    implementation project(':lib-read-status')
     implementation project(':lib-navigation')
     implementation project(':lib-app-data')
     implementation project(':data-shared')
