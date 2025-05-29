@@ -47,7 +47,7 @@ internal class ReadStatusImpl(
         get() = internalReadMarker
 
     init {
-        Clog.i("ReadStatus init")
+        Clog.i("ReadStatus.init")
         externalScope.launch {
             // refresh manga on login
             try {
@@ -72,7 +72,7 @@ internal class ReadStatusImpl(
 
     // TODO: some of this logic should be separate from readstatus
     override suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
-        Clog.i("refresh")
+        Clog.i("ReadStatus.refresh: start")
 
         val readMarkers = chapters.map { ReadMarkerEntity.from(it, null) }
         readMarkerDb.insertAll(*readMarkers.toTypedArray())
@@ -89,7 +89,9 @@ internal class ReadStatusImpl(
         // handles edge case where item is marked as read in another client
         val readQueue = readQueueDb.getAllSync()
         val completedQueue = readQueue.filter { it.chapterId in chaptersToUpdate.map { it.id } }
-        Clog.i("Clearing ${completedQueue.size} chapters from read queue")
+        if (completedQueue.isNotEmpty()) {
+            Clog.i("ReadStatus.refresh: Clearing ${completedQueue.size} based on read status")
+        }
         readQueueDb.deleteAll(*completedQueue.toTypedArray())
 
         if (chaptersToUpdate.isEmpty()) {
@@ -116,7 +118,7 @@ internal class ReadStatusImpl(
             val readQueue = readQueueDb.getAllSync()
             val chapters = readQueue.map { it to chapterDb.getChapterForId(it.chapterId) }
 
-            Clog.i("Sending ${chapters.size} completed chapters to server")
+            Clog.i("ReadStatus.sendCompletedChapters: Sending ${chapters.size} completed chapters to server")
 
             chapters.forEach { (queue, chapter) ->
                 val success = mangaService.changeReadStatus(
@@ -127,10 +129,10 @@ internal class ReadStatusImpl(
                 if (success) {
                     readQueueDb.delete(chapter.id)
                 } else if (queue.retryCount >= 3) {
-                    Clog.w("Failed to send completed chapter to server 3 times, deleting from queue")
+                    Clog.w("ReadStatus.sendCompletedChapters: Failed to send completed chapter to server 3 times, deleting from queue")
                     readQueueDb.delete(chapter.id)
                 } else {
-                    Clog.i("Failed to send completed chapter ${chapter.id} to server, will retry later")
+                    Clog.i("ReadStatus.sendCompletedChapters: Failed to send completed chapter ${chapter.id} to server, will retry later")
                     readQueueDb.update(queue.copy(retryCount = queue.retryCount + 1))
                 }
             }
@@ -143,7 +145,7 @@ internal class ReadStatusImpl(
 
     private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) {
         externalScope.launch {
-            Clog.i("markChapterRead: mangaId: $mangaId, chapterId: $chapterId, read: $read")
+            Clog.i("ReadStatus.markChapterRead: mangaId: $mangaId, chapterId: $chapterId, read: $read")
 
             val manga = mangaDb.getMangaById(mangaId)
 
@@ -160,7 +162,10 @@ internal class ReadStatusImpl(
 
                 val readQueueEntity = readQueueDb.get(chapterId)
                 if (readQueueEntity == null) {
+                    Clog.i("ReadStatus.markChapterRead: adding $chapterId to readQueueDB")
                     readQueueDb.insert(ReadQueueEntity(chapterId = chapterId, retryCount = 0, read = read))
+                } else {
+                    Clog.i("ReadStatus.markChapterRead: updating $chapterId in readQueueDB to read = $read")
                 }
 
                 readMarkerDb.update(entity.copy(readStatus = read))
