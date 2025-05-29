@@ -6,7 +6,6 @@ import com.melonhead.data_manga.services.MangaService
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
-import com.melonhead.lib_chapter_cache.ChapterCache
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
 import com.melonhead.lib_database.manga.MangaDao
@@ -41,7 +40,6 @@ internal class ReadStatusImpl(
     private val mangaService: MangaService,
     private val appEventsRepository: AppEventsRepository,
     private val newChapterNotificationChannel: NewChapterNotificationChannel,
-    private val chapterCache: ChapterCache,
 ) : ReadStatus {
 
     private val internalReadMarker = readStatusDb.getAll()
