@@ -131,8 +131,8 @@ internal class MangaListViewModel(
         appEventsRepository.postEvent(UserEvent.SetMarkChapterRead(uiChapter.id, uiManga.id, read))
     }
 
-    fun setChapterBlocked(uiChapter: UIChapter, blocked: Boolean) {
-        appEventsRepository.postEvent(UserEvent.SetChapterBlocked(uiChapter.id, blocked))
+    fun setChapterBlocked(uiManga: UIManga, uiChapter: UIChapter, blocked: Boolean) {
+        appEventsRepository.postEvent(UserEvent.SetChapterBlocked(uiManga.id, uiChapter.id, blocked))
     }
 
     fun clearChapterCache(uiManga: UIManga, uiChapter: UIChapter) {

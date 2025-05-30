@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 internal fun ChapterOptionsDialog(
     mangaChapterPair: Pair<UIManga, UIChapter>?,
     onToggleRead: (UIManga, UIChapter, Boolean) -> Unit,
-    onToggleBlock: (UIChapter, Boolean) -> Unit,
+    onToggleBlock: (UIManga, UIChapter, Boolean) -> Unit,
     onClearCache: (UIManga, UIChapter) -> Unit,
     onDismissed: () -> Unit,
 ) {
@@ -53,7 +53,7 @@ internal fun ChapterOptionsDialog(
     ModalBottomSheet(sheetState = sheetState, onDismissRequest = { onDismissed() }) {
         ChapterOptionsDialogContent(
             onToggleRead = { onToggleRead(manga, chapter, it) },
-            onToggleBlock = { onToggleBlock(chapter, it) },
+            onToggleBlock = { onToggleBlock(manga, chapter, it) },
             onClearCache = {
                 onClearCache(manga, chapter)
                 scope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -167,6 +167,6 @@ private fun ChapterOptionsDialogPreview() {
     MangadexFollowerTheme {
         val manga = Previews.previewUIManga()
         val chapter = Previews.previewUIChapters().first()
-        ChapterOptionsDialog(manga to chapter, { _, _, _ -> }, { _, _ -> }, { _, _ -> }, {})
+        ChapterOptionsDialog(manga to chapter, { _, _, _ -> }, { _, _, _ -> }, { _, _ -> }, {})
     }
 }

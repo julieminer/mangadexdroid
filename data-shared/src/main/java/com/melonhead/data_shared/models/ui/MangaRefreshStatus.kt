@@ -9,10 +9,12 @@ sealed class MangaRefreshStatus {
             ReadStatus -> "Fetching Read Status..."
             FetchingChapters -> "Downloading Chapter Images..."
         }
+
+    data object Following: MangaRefreshStatus()
+    data object MangaSeries: MangaRefreshStatus()
+    data object None: MangaRefreshStatus()
+    data object ReadStatus: MangaRefreshStatus()
+    data object FetchingChapters: MangaRefreshStatus()
 }
 
-data object Following: MangaRefreshStatus()
-data object MangaSeries: MangaRefreshStatus()
-data object None: MangaRefreshStatus()
-data object ReadStatus: MangaRefreshStatus()
-data object FetchingChapters: MangaRefreshStatus()
+

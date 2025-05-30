@@ -3,14 +3,18 @@ package com.melonhead.lib_chapter_cache
 import android.content.Context
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.lib_app_data.AppData
+import com.melonhead.lib_app_events.AppEventsRepository
+import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_database.chapter.ChapterEntity
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.downloadFile
 import io.ktor.client.HttpClient
+import io.ktor.server.application.ApplicationEvents
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -37,7 +41,47 @@ internal class ChapterCacheImpl(
     private val appContext: Context,
     private val httpClient: HttpClient,
     private val externalScope: CoroutineScope,
+    private val appEventsRepository: AppEventsRepository
 ) : ChapterCache {
+
+    init {
+        Clog.i("ChapterCache init")
+        externalScope.launch {
+            // refresh manga on login
+            try {
+                // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
+                appEventsRepository.events.collectLatest { event ->
+                    launch {
+                        when (event) {
+                            is UserEvent.SetMarkChapterRead -> {
+                                if (event.read) {
+                                    clearChapterFromCache(
+                                        mangaId = event.mangaId,
+                                        chapterId = event.chapterId
+                                    )
+                                }
+                            }
+
+                            is UserEvent.SetChapterBlocked -> {
+                                if (event.blocked) {
+                                    clearChapterFromCache(
+                                        mangaId = event.mangaId,
+                                        chapterId = event.chapterId
+                                    )
+                                }
+                            }
+
+                            else -> {
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
     override val cachingStatus: Flow<CachingStatus>
         get() = mutableCachingStatus

@@ -81,7 +81,7 @@ internal fun ChapterListItem(
                     fontSize = 12.sp
                 )
             }
-            if (refreshStatus !is None && uiChapter.read != true) {
+            if (refreshStatus !is MangaRefreshStatus.None && uiChapter.read != true) {
                 CircularProgressIndicator(modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .size(12.dp),
@@ -106,32 +106,32 @@ private fun ChapterPreview() {
             ChapterListItem(
                 uiChapter = Previews.previewUIChapters().first(),
                 uiManga = manga,
-                refreshStatus = ReadStatus,
+                refreshStatus = MangaRefreshStatus.ReadStatus,
                 onChapterClicked = { _, _ -> },
                 onChapterLongPressed = { _, _ -> })
             ChapterListItem(
                 uiChapter = Previews.previewUIChapters().first().copy(read = false),
                 uiManga = manga,
-                refreshStatus = ReadStatus,
+                refreshStatus = MangaRefreshStatus.ReadStatus,
                 onChapterClicked = { _, _ -> },
                 onChapterLongPressed = { _, _ -> })
             ChapterListItem(
                 uiChapter = Previews.previewUIChapters().first().copy(read = false, cachedPages = 5),
                 uiManga = manga,
-                refreshStatus = None,
+                refreshStatus = MangaRefreshStatus.None,
                 onChapterClicked = { _, _ -> },
                 onChapterLongPressed = { _, _ -> })
             ChapterListItem(
                 uiChapter = Previews.previewUIChapters().first().copy(chapter = "101", cachedPages = 5),
                 uiManga = manga.copy(lastChapter = "101"),
-                refreshStatus = ReadStatus,
+                refreshStatus = MangaRefreshStatus.ReadStatus,
                 onChapterClicked = { _, _ -> },
                 onChapterLongPressed = { _, _ -> })
             ChapterListItem(
                 uiChapter = Previews.previewUIChapters().first()
                     .copy(title = "Test Title with an extremely long title that may or may not wrap"),
                 uiManga = manga,
-                refreshStatus = ReadStatus,
+                refreshStatus = MangaRefreshStatus.ReadStatus,
                 onChapterClicked = { _, _ -> },
                 onChapterLongPressed = { _, _ -> })
         }
