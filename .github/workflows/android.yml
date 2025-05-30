@@ -28,6 +28,8 @@ jobs:
         versionCode: ${{github.run_number}}
     - name: Build Debug APK
       run: ./gradlew assembleDebug
+    - name: Check Signing Config
+      run: ./gradlew signinngReport
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
