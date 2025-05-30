@@ -116,7 +116,7 @@ internal class MangaRepositoryImpl(
         val uiManga = dbSeries.mapNotNull { manga ->
             var hasExternalChapters = false
             val chapters = dbChapters.filter { !it.blockedChapter }.filter { it.mangaId == manga.id }.map { chapter ->
-                val read = readStatus.isRead(chapter) // readMarkerDb.getEntityByChapter(chapter.mangaId, chapter.chapter)?.readStatus == true
+                val read = readStatus.isRead(chapter)
                 hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
                 UIChapter(
                     id = chapter.id,
