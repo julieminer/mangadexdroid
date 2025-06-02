@@ -147,71 +147,95 @@ internal class ReadStatusImpl(
         externalScope.launch {
             Clog.i("ReadStatus.markChapterRead: mangaId: $mangaId, chapterId: $chapterId, read: $read")
 
-            val manga = mangaDb.getMangaById(mangaId)
-
-            suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean) {
-                val entity = readMarkerDb.getEntityByChapter(
-                    mangaId = mangaId,
-                    chapter = chapter.chapter
-                ) ?: return
-
-                if (read) {
-                    // TODO: notification event
-                    newChapterNotificationChannel.dismissNotification(context, mangaId, chapterId)
-                }
-
-                val readQueueEntity = readQueueDb.get(chapterId)
-                if (readQueueEntity == null) {
-                    Clog.i("ReadStatus.markChapterRead: adding $chapterId to readQueueDB")
-                    readQueueDb.insert(ReadQueueEntity(chapterId = chapterId, retryCount = 0, read = read))
-                } else {
-                    Clog.i("ReadStatus.markChapterRead: updating $chapterId in readQueueDB to read = $read")
-                    readQueueDb.update(readQueueEntity.copy(read = read))
-                }
-
-                readMarkerDb.update(entity.copy(readStatus = read))
-                if (isDuplicate) return
-                // TODO: consider using logic event?
-                val readingStatus = mangaService.getSeriesReadingStatus(mangaId) ?: return
-                when (readingStatus) {
-                    ReadingStatus.ReReading,
-                    ReadingStatus.Reading,
-                        -> {
-                        if (read && manga?.lastChapter == chapter.chapter && appData.autoMarkMangaCompleted.firstOrNull() == true) {
-                            mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Completed)
-                            appEventsRepository.postEvent(
-                                SystemLogicEvents.PromptMangaRating(
-                                    mangaId
-                                )
-                            )
-                        }
-                    }
-
-                    ReadingStatus.OnHold -> {
-                        if (read && appData.autoMarkMangaReading.firstOrNull() == true) {
-                            mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.Reading)
-                        }
-                    }
-
-                    ReadingStatus.Completed,
-                    ReadingStatus.PlanToRead,
-                    ReadingStatus.Dropped -> {
-                        // no-op
-                    }
-                }
-            }
-
             val chapter = chapterDb.getChapterForId(chapterId)
             val chapterTitle = chapter.chapterTitle
 
             if (chapterTitle != null) {
                 val chapters = chapterDb.getChaptersByTitle(chapterTitle)
                 chapters.forEach {
-                    internalMarkChapterAsRead(it, isDuplicate = true)
+                    internalMarkChapterAsRead(it, isDuplicate = true, read = read)
                 }
             } else {
-                internalMarkChapterAsRead(chapter, isDuplicate = false)
+                internalMarkChapterAsRead(chapter, isDuplicate = false, read = read)
             }
         }
     }
+
+    private suspend fun internalMarkSeriesReading(chapter: ChapterEntity, read: Boolean) {
+        if (!read) return
+        if (appData.autoMarkMangaReading.firstOrNull() != true) return
+
+        val manga = mangaDb.getMangaById(chapter.mangaId)
+        if (manga == null) {
+            Clog.e("ReadStatus.internalMarkSeriesReading: manga not found", NullPointerException("ReadStatus.internalMarkSeriesReading: manga not found"))
+            return
+        }
+
+        mangaService.changeSeriesReadingStatus(chapter.mangaId, ReadingStatus.Reading)
+    }
+
+    private suspend fun internalMarkSeriesComplete(chapter: ChapterEntity, read: Boolean) {
+        if (!read) return
+        if (appData.autoMarkMangaCompleted.firstOrNull() != true) return
+
+        val manga = mangaDb.getMangaById(chapter.mangaId)
+        if (manga == null) {
+            Clog.e("ReadStatus.internalMarkSeriesComplete: manga not found", NullPointerException("ReadStatus.internalMarkSeriesComplete: manga not found"))
+            return
+        }
+
+        if (manga.lastChapter != chapter.chapter) return
+        mangaService.changeSeriesReadingStatus(chapter.mangaId, ReadingStatus.Completed)
+        appEventsRepository.postEvent(
+            SystemLogicEvents.PromptMangaRating(
+                chapter.mangaId
+            )
+        )
+    }
+
+    private suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean, read: Boolean) {
+        val entity = readMarkerDb.getEntityByChapter(
+            mangaId = chapter.mangaId,
+            chapter = chapter.chapter
+        ) ?: return
+
+        if (read) {
+            // TODO: notification event
+            newChapterNotificationChannel.dismissNotification(context, chapter.mangaId, chapter.id)
+        }
+
+        val readQueueEntity = readQueueDb.get(chapter.id)
+        if (readQueueEntity == null) {
+            Clog.i("ReadStatus.markChapterRead: adding ${chapter.id} to readQueueDB")
+            readQueueDb.insert(ReadQueueEntity(chapterId = chapter.id, retryCount = 0, read = read))
+        } else {
+            Clog.i("ReadStatus.markChapterRead: updating ${chapter.id} in readQueueDB to read = $read")
+            readQueueDb.update(readQueueEntity.copy(read = read))
+        }
+
+        readMarkerDb.update(entity.copy(readStatus = read))
+        if (isDuplicate) return
+
+        // TODO: consider using logic event or creating a lib
+        val readingStatus = mangaService.getSeriesReadingStatus(chapter.mangaId) ?: return
+        when (readingStatus) {
+            ReadingStatus.ReReading,
+            ReadingStatus.Reading,
+                -> {
+                internalMarkSeriesComplete(chapter, read)
+            }
+
+            ReadingStatus.OnHold -> {
+                internalMarkSeriesReading(chapter, read)
+                internalMarkSeriesComplete(chapter, read)
+            }
+
+            ReadingStatus.Completed,
+            ReadingStatus.PlanToRead,
+            ReadingStatus.Dropped -> {
+                // no-op
+            }
+        }
+    }
+
 }
