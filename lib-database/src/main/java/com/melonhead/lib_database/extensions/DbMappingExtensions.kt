@@ -23,7 +23,7 @@ fun MangaEntity.Companion.from(manga: Manga, chosenTitle: String?): MangaEntity 
     return MangaEntity(
         id = manga.id,
         mangaTitles = titles,
-        chosenTitle = chosenTitle ?: titles.last(),
+        chosenTitle = chosenTitle ?: titles.lastOrNull(),
         mangaCoverId = manga.fileName,
         status = manga.attributes.status,
         tags = manga.attributes.tags.mapNotNull {
