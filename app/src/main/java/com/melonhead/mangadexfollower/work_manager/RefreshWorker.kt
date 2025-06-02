@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.future.await
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -15,6 +16,7 @@ class RefreshWorker(appContext: Context, workerParams: WorkerParameters): Corout
 
     override suspend fun doWork(): Result {
         val refreshCompletion = CompletableFuture<Unit>()
+        Clog.i("Refresh: refreshworker")
         appEventsRepository.postEvent(UserEvent.RefreshManga(refreshCompletion))
         refreshCompletion.await()
         return Result.success()

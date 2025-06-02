@@ -144,6 +144,7 @@ internal class AuthRepositoryImpl(
         val token = loginService.authenticate(email, password)
         appData.updateToken(session = token?.session, refresh = token?.refresh)
         appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
+        Clog.i("Refresh: authenticate")
         appEventsRepository.postEvent(UserEvent.RefreshManga())
     }
 
@@ -159,6 +160,7 @@ internal class AuthRepositoryImpl(
         val token = loginService.authenticateOauth(email, password, clientId, clientSecret)
         appData.updateToken(session = token?.accessToken, refresh = token?.refreshToken)
         appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
+        Clog.i("Refresh: authenticate")
         appEventsRepository.postEvent(UserEvent.RefreshManga())
     }
 }

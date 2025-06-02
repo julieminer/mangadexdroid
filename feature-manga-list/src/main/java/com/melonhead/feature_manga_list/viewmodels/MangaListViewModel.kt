@@ -29,6 +29,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import androidx.core.net.toUri
+import com.melonhead.lib_logging.Clog
 
 internal class MangaListViewModel(
     private val mangaRepository: MangaRepository,
@@ -140,6 +141,7 @@ internal class MangaListViewModel(
     }
 
     fun refreshContent() = viewModelScope.launch {
+        Clog.i("Refresh: pull")
         appEventsRepository.postEvent(UserEvent.RefreshManga())
         delay(5000) // prevent another refresh for 5 second
     }

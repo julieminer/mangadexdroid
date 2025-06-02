@@ -76,6 +76,7 @@ internal class MangaRepositoryImpl(
                             is AuthenticationEvent.LoggedIn -> {
                                 if (!isLoggedIn) {
                                     isLoggedIn = true
+                                    Clog.i("Refresh: Logged in")
                                     refreshMangaThrottled(event)
                                 }
                             }
@@ -83,9 +84,11 @@ internal class MangaRepositoryImpl(
                                 isLoggedIn = false
                             }
                             is AppLifecycleEvent.AppForegrounded -> {
+                                Clog.i("Refresh: Foregrounded")
                                 refreshMangaThrottled(event)
                             }
                             is UserEvent.RefreshManga -> {
+                                Clog.i("Refresh: Refresh event")
                                 refreshMangaThrottled(event)
                             }
                             is UserEvent.SetMarkChapterRead -> {
@@ -108,6 +111,7 @@ internal class MangaRepositoryImpl(
             }
         }
 
+        Clog.i("Refresh: init")
         refreshMangaThrottled(AppLifecycleEvent.AppForegrounded)
     }
 
