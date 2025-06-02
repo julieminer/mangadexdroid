@@ -11,6 +11,7 @@ import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
 import java.io.File
+import java.net.ConnectException
 import kotlin.random.Random
 
 // this is bad, but we need to refactor out an event system to avoid it
@@ -30,7 +31,7 @@ suspend inline fun <reified T> HttpClient.catching(logMessage: String, function:
                 error401Callback?.invoke()
             }
             Clog.w("$logMessage: ${response.bodyAsText()}")
-        } else {
+        } else if (e !is ConnectException) {
             Clog.e("$logMessage: ${response?.bodyAsText() ?: ""}", e)
         }
         null
