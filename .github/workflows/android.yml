@@ -31,7 +31,7 @@ jobs:
     - name: Sign Android
       uses: Tlaster/android-sign@v1.2.2
       with:
-        releaseDirectory: app/build/outputs/apk/debug/app-debug.apk
+        releaseDirectory: app/build/outputs/apk/debug/
         signingKeyBase64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         alias: ${{ secrets.DEBUG_KEYSTORE_ALIAS }}
         keyStorePassword: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
