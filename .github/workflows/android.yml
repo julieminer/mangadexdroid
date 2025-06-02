@@ -24,17 +24,23 @@ jobs:
     - name: Bump version
       uses: chkfung/android-version-actions@v1.1
       with:
-        gradlePath: app/build.gradle # or app/build.gradle.kts 
+        gradlePath: app/build.gradle
         versionCode: ${{github.run_number}}
     - name: Build Debug APK
       run: ./gradlew assembleDebug
-    - name: Check Signing Config
-      run: ./gradlew signinngReport
+    - name: Sign Android
+      uses: Tlaster/android-sign@v1.2.2
+      with:
+        releaseDirectory: app/build/outputs/apk/debug/signed/app-debug.apk
+        signingKeyBase64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        alias: ${{ secrets.DEBUG_KEYSTORE_ALIAS }}
+        keyStorePassword: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+        output: app/build/outputs/apk/debug/signed/app-debug.apk
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
         generate_release_notes: true
         files: |
-          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/debug/signed/app-debug.apk
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
