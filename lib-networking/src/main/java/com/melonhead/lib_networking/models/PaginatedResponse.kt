@@ -17,7 +17,13 @@ suspend inline fun <reified T> handlePagination(
     val allItems = mutableSetOf<T>()
     var unauthRetryCount = 0
     while (allItems.count() < total) {
-        val result = request(allItems.count()) ?: continue
+        val result = request(allItems.count())
+
+        if (result == null) {
+            Clog.i("handlePagination: Result is null, likely a problem in the request")
+            break
+        }
+
         if (result.status == HttpStatusCode.Unauthorized) {
             Clog.i("handlePagination: Unauthorized")
             unauthRetryCount++
