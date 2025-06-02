@@ -13,7 +13,7 @@ fun Context.networkAvailability(): Flow<Boolean> {
     return flow {
         emit(isNetworkAvailable())
         while (true) {
-            delay(5000)
+            delay(500L)
             emit(isNetworkAvailable())
         }
     }.distinctUntilChanged()
