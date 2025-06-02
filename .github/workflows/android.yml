@@ -29,13 +29,19 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug
     - name: Sign Android
-      uses: Tlaster/android-sign@v1.2.2
+      # You may pin to the exact commit or the version.
+      # uses: noriban/sign-android-release@5f144321d3c7c2233266e78b42360345d8bbe403
+      uses: noriban/sign-android-release@v5.1
       with:
+        # The directory to find your release to sign
         releaseDirectory: app/build/outputs/apk/debug/
+        # The key used to sign your release in base64 encoded format
         signingKeyBase64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        # The key alias
         alias: ${{ secrets.DEBUG_KEYSTORE_ALIAS }}
+        # The password to the keystore
         keyStorePassword: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
-        output: app/build/outputs/apk/debug/signed/
+        # The password for the key
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
