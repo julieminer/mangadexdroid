@@ -74,6 +74,8 @@ internal class AuthRepositoryImpl(
         appData.updateToken(session = newToken?.accessToken, refresh = newToken?.refreshToken)
         if (newToken == null) {
             signOut()
+        } else if (appData.userIdFlow.firstOrNull() != null) {
+            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
         } else {
             val userResponse = userService.getInfo()
             val userId = userResponse?.data?.id

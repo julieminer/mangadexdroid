@@ -99,6 +99,7 @@ internal class MangaListViewModel(
         viewModelScope.launch {
             val intent = when (userAppData.renderStyle) {
                 RenderStyle.Native -> {
+                    // TODO: use chapter cache directly
                     val chapterData = mangaRepository.getChapterData(uiManga.id, uiChapter.id)
                     // use secondary render style
                     if (chapterData.isNullOrEmpty()) {
