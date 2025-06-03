@@ -12,4 +12,5 @@ sealed class UserEvent: AppEvent {
     data class SetChapterBlocked(val mangaId: String, val chapterId: String, val blocked: Boolean): UserEvent()
     data class UpdateChosenMangaTitle(val mangaId: String, val title: String): UserEvent()
     data class OpenedNotification(val context: Context, val manga: UIManga, val chapter: UIChapter): UserEvent()
+    data class SetMangaRating(val mangaId: String, val rating: Int): UserEvent()
 }

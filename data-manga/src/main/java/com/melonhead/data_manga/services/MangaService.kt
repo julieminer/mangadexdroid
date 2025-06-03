@@ -24,7 +24,7 @@ interface MangaService {
     suspend fun getReadChapters(mangaIds: List<String>): List<String>
     suspend fun changeReadStatus(mangaId: String, chapterId: String, readStatus: Boolean): Boolean
     suspend fun getSeriesReadingStatus(mangaId: String): ReadingStatus?
-    suspend fun changeSeriesReadingStatus(mangaId: String, readingStatus: ReadingStatus)
+    suspend fun changeSeriesReadingStatus(mangaId: String, readingStatus: ReadingStatus): Boolean
 }
 
 internal class MangaServiceImpl(
@@ -107,10 +107,10 @@ internal class MangaServiceImpl(
         return ReadingStatus.from(status)
     }
 
-    override suspend fun changeSeriesReadingStatus(mangaId: String, readingStatus: ReadingStatus) {
-        val session = appData.getSession() ?: return
+    override suspend fun changeSeriesReadingStatus(mangaId: String, readingStatus: ReadingStatus): Boolean {
+        val session = appData.getSession() ?: return false
         Clog.i("changeSeriesReadingStatus: manga $mangaId readingStatus $readingStatus")
-        client.catchingSuccess("changeSeriesReadingStatus") {
+        return client.catchingSuccess("changeSeriesReadingStatus") {
             client.post(MANGA_READ_STATUS_URL.replace(ID_PLACEHOLDER, mangaId)) {
                 headers {
                     contentType(ContentType.Application.Json)

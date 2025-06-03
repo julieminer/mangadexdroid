@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface SyncQueueDao {
@@ -15,10 +16,10 @@ interface SyncQueueDao {
     suspend fun insert(syncQueueEntity: SyncQueueEntity)
 
     @Delete
-    suspend fun deleteAll(vararg syncQueueEntity: SyncQueueEntity)
+    suspend fun delete(syncQueueEntity: SyncQueueEntity)
 
-    @Query("DELETE FROM $TABLE_NAME where id = :id")
-    suspend fun delete(id: Long)
+    @Update
+    suspend fun update(vararg syncQueueEntity: SyncQueueEntity)
 
     companion object {
         const val TABLE_NAME = "sync_queue"

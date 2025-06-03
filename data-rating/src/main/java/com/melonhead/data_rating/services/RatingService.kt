@@ -15,7 +15,7 @@ import io.ktor.http.contentType
 
 interface RatingService {
     suspend fun getRatings(mangaIds: List<String>): Map<String, Int>
-    suspend fun setRating(mangaId: String, ratingNumber: Int)
+    suspend fun setRating(mangaId: String, ratingNumber: Int): Boolean
 }
 
 internal class RatingServiceImpl(
@@ -43,10 +43,10 @@ internal class RatingServiceImpl(
         }?.toMap() ?: emptyMap()
     }
 
-    override suspend fun setRating(mangaId: String, ratingNumber: Int) {
-        val session = appData.getSession() ?: return
+    override suspend fun setRating(mangaId: String, ratingNumber: Int): Boolean {
+        val session = appData.getSession() ?: return false
         Clog.i("setRating: manga $mangaId rating $ratingNumber")
-        client.catchingSuccess("setRating") {
+        return client.catchingSuccess("setRating") {
             client.post(HttpRoutes.RATING_CHANGE_URL.replace(ID_PLACEHOLDER, mangaId)) {
                 headers {
                     contentType(ContentType.Application.Json)
