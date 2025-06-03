@@ -2,7 +2,6 @@ package com.melonhead.feature_manga_list.viewmodels
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -18,10 +17,9 @@ import com.melonhead.feature_manga_list.MangaRepository
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
-import com.melonhead.lib_chapter_cache.ChapterCache
+import com.melonhead.lib_chapter_cache.ChapterCacheRepository
 import com.melonhead.lib_navigation.Navigator
 import com.melonhead.lib_navigation.keys.ActivityKey
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -33,7 +31,7 @@ import com.melonhead.lib_logging.Clog
 
 internal class MangaListViewModel(
     private val mangaRepository: MangaRepository,
-    private val chapterCache: ChapterCache,
+    private val chapterCacheRepository: ChapterCacheRepository,
     private val userAppData: AppData,
     private val navigator: Navigator,
     private val appEventsRepository: AppEventsRepository,
@@ -137,7 +135,7 @@ internal class MangaListViewModel(
     }
 
     fun clearChapterCache(uiManga: UIManga, uiChapter: UIChapter) {
-        chapterCache.clearChapterFromCache(uiManga.id, uiChapter.id)
+        chapterCacheRepository.clearChapterFromCache(uiManga.id, uiChapter.id)
     }
 
     fun refreshContent() = viewModelScope.launch {
@@ -155,7 +153,7 @@ internal class MangaListViewModel(
     }
 
     fun clearCache(uiManga: UIManga) {
-        chapterCache.clearCacheForManga(uiManga.id)
+        chapterCacheRepository.clearCacheForManga(uiManga.id)
     }
 
     fun rateManga(manga: UIManga, rating: Int) {

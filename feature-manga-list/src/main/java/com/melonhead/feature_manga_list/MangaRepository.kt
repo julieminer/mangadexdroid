@@ -19,7 +19,7 @@ import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_notifications.NewChapterNotificationChannel
-import com.melonhead.lib_chapter_cache.ChapterCache
+import com.melonhead.lib_chapter_cache.ChapterCacheRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.future.await
@@ -43,7 +43,7 @@ internal class MangaRepositoryImpl(
     private val readStatusRepository: ReadStatusRepository,
 
     private val context: Context,
-    private val chapterCache: ChapterCache,
+    private val chapterCacheRepository: ChapterCacheRepository,
     private val appEventsRepository: AppEventsRepository,
     private val newChapterNotificationChannel: NewChapterNotificationChannel,
     private val appContext: AppContext,
@@ -54,7 +54,7 @@ internal class MangaRepositoryImpl(
     }
 
     // combine all manga series and chapters
-    override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers, chapterCache.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
+    override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers, chapterCacheRepository.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
         generateUIManga(dbSeries, dbChapters)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
 
@@ -129,7 +129,7 @@ internal class MangaRepositoryImpl(
                     read = read,
                     blocked = chapter.blockedChapter,
                     externalUrl = chapter.externalUrl,
-                    cachedPages = chapterCache.getChapterPageCountFromCache(manga.id, chapter.id)
+                    cachedPages = chapterCacheRepository.getChapterPageCountFromCache(manga.id, chapter.id)
                 )
             }
             if (chapters.isEmpty()) return@mapNotNull null
@@ -222,7 +222,7 @@ internal class MangaRepositoryImpl(
         val newChapters = chapterDb.getAllSync()
             .filter { !readStatusRepository.isRead(it) }
             .filter { !it.blockedChapter }
-        chapterCache.cacheImagesForChapters(manga, newChapters)
+        chapterCacheRepository.cacheImagesForChapters(manga, newChapters)
 
         if (appContext.isInForeground) return
         val notificationManager = NotificationManagerCompat.from(context)
@@ -236,7 +236,7 @@ internal class MangaRepositoryImpl(
 
     // currently trying to deprecate this function, and use chapterCache directly
     override suspend fun getChapterData(mangaId: String, chapterId: String): List<String>? {
-        val chapterFiles = chapterCache.getChapterFromCache(mangaId, chapterId)
+        val chapterFiles = chapterCacheRepository.getChapterFromCache(mangaId, chapterId)
         if (chapterFiles.isNotEmpty()) return chapterFiles
 
         Clog.i("Chapter not found in cache: $mangaId, $chapterId")

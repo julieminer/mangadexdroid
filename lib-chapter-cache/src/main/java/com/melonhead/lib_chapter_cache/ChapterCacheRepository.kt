@@ -10,7 +10,6 @@ import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.downloadFile
 import io.ktor.client.HttpClient
-import io.ktor.server.application.ApplicationEvents
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +25,7 @@ sealed class CachingStatus {
     data object FinishedCacheOperation: CachingStatus()
 }
 
-interface ChapterCache {
+interface ChapterCacheRepository {
     val cachingStatus: Flow<CachingStatus>
     fun getChapterFromCache(mangaId: String, chapterId: String): List<String>
     fun getChapterPageCountFromCache(mangaId: String, chapterId: String): Int?
@@ -35,14 +34,14 @@ interface ChapterCache {
     fun clearCacheForManga(mangaId: String)
 }
 
-internal class ChapterCacheImpl(
+internal class ChapterCacheRepositoryImpl(
     private val appData: AppData,
     private val atHomeService: AtHomeService,
     private val appContext: Context,
     private val httpClient: HttpClient,
     private val externalScope: CoroutineScope,
     private val appEventsRepository: AppEventsRepository
-) : ChapterCache {
+) : ChapterCacheRepository {
 
     init {
         Clog.i("ChapterCache init")

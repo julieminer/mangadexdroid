@@ -11,7 +11,7 @@ import com.melonhead.feature_manga_list.viewmodels.MangaListViewModel
 import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_data.di.LibAppDataModule
 import com.melonhead.lib_app_events.di.LibAppEventsModule
-import com.melonhead.lib_chapter_cache.di.LibChapterCacheModule
+import com.melonhead.lib_chapter_cache.di.LibChapterCacheRepositoryModule
 import com.melonhead.lib_read_status.di.LibReadStatusRepositoryModule
 import com.melonhead.lib_database.di.LibDbModule
 import com.melonhead.lib_notifications.di.LibNotificationsModule
@@ -23,7 +23,7 @@ val FeatureMangaListModule = module {
     includes(LibNotificationsModule)
     includes(LibAppContextModule)
     includes(LibDbModule)
-    includes(LibChapterCacheModule)
+    includes(LibChapterCacheRepositoryModule)
     includes(LibReadStatusRepositoryModule)
     includes(LibAppDataModule)
 
