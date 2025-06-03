@@ -3,7 +3,9 @@ package com.melonhead.lib_sync_queue
 import com.melonhead.data_manga.models.ReadingStatus
 import com.melonhead.data_manga.services.MangaService
 import com.melonhead.data_rating.services.RatingService
+import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
+import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_core.extensions.throttleLatest
@@ -13,7 +15,9 @@ import com.melonhead.lib_database.sync_queue.SyncQueueEvent
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import java.util.concurrent.CompletableFuture
 
 interface WriteSyncRepository
 
@@ -23,6 +27,7 @@ internal class WriteSyncRepositoryImpl(
     private val syncQueueDb: SyncQueueDao,
     private val ratingService: RatingService,
     private val mangaService: MangaService,
+    private val appData: AppData,
 ) : WriteSyncRepository {
     private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, externalScope) { event ->
         processQueue()
@@ -83,6 +88,16 @@ internal class WriteSyncRepositoryImpl(
 
     private fun processQueue() {
         externalScope.launch {
+            val refreshCompletionJob = CompletableFuture<Unit>()
+            appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))
+            refreshCompletionJob.await()
+
+            val token = appData.getToken()
+            if (token == null) {
+                Clog.i("Failed to refresh token")
+                return@launch
+            }
+
             val syncItems = syncQueueDb.getAllSync().filter { it.retryCount < 3 }
             for (item in syncItems) {
                 val success = when (item.event) {
