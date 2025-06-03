@@ -37,6 +37,7 @@ internal fun MangaListScreen(
     buildVersionName: String,
     buildVersionCode: String,
 ) {
+    val context = LocalContext.current
     var chapterOptionsDialog by remember { mutableStateOf<Pair<UIManga, UIChapter>?>(null) }
 
     ChapterOptionsDialog(
@@ -55,18 +56,19 @@ internal fun MangaListScreen(
     )
 
     var showMangaModal by remember { mutableStateOf<UIManga?>(null) }
+
     MangaOptionsDialog(
         manga = showMangaModal,
         onChangeTitle = { manga, title -> viewModel.setMangaTitle(manga, title) },
         onToggleRendering = { manga, renderingValue -> viewModel.toggleMangaWebview(manga, renderingValue) },
-        onClearCache = { manga -> viewModel.clearCache(manga) }
+        onClearCache = { manga -> viewModel.clearCache(manga) },
+        onViewWebTapped = { manga -> viewModel.viewMangaOnWeb(context, manga) },
     ) {
         showMangaModal = null
     }
 
     val isRefreshing = rememberSwipeRefreshState(isRefreshing = false)
     var justPulledRefresh by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     val manga by viewModel.manga.observeAsState(listOf())
     val refreshStatus by viewModel.refreshStatus.observeAsState(MangaRefreshStatus.None)

@@ -25,6 +25,7 @@ internal fun MangaOptionsDialog(
     onChangeTitle: (UIManga, String) -> Unit,
     onToggleRendering: (UIManga, Boolean) -> Unit,
     onClearCache: (UIManga) -> Unit,
+    onViewWebTapped: (UIManga) -> Unit,
     onDismissed: () -> Unit,
 ) {
     if (manga != null) {
@@ -47,6 +48,7 @@ internal fun MangaOptionsDialog(
                 usesWebView = manga.useWebview,
                 onChangeTitle = { showTitleChangeDialogForManga = true },
                 onToggleRendering = { onToggleRendering(manga, it) },
+                onViewWebTapped = { onViewWebTapped(manga) },
                 onClearCache = {
                     onClearCache(manga)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -67,6 +69,7 @@ private fun MangaOptionsDialogContent(
     usesWebView: Boolean,
     onChangeTitle: () -> Unit,
     onToggleRendering: (Boolean) -> Unit,
+    onViewWebTapped: () -> Unit,
     onClearCache: () -> Unit,
 ) {
     var usesWebView by remember { mutableStateOf(usesWebView) }
@@ -117,6 +120,10 @@ private fun MangaOptionsDialogContent(
                 })
             }
 
+            Button(modifier = Modifier.fillMaxWidth(), onClick = onViewWebTapped) {
+                Text(text = "View Series On Web")
+            }
+
             Button(modifier = Modifier.fillMaxWidth(), onClick = onChangeTitle) {
                 Text(text = "Change Manga Title")
             }
@@ -135,6 +142,6 @@ private fun MangaOptionsDialogContent(
 @Preview(showBackground = true, showSystemUi = true)
 private fun MangaOptionsDialogPreview() {
     MangadexFollowerTheme {
-        MangaOptionsDialog(Previews.previewUIManga(), { _, _ -> }, { _, _ -> }, {}, {})
+        MangaOptionsDialog(Previews.previewUIManga(), { _, _ -> }, { _, _ -> }, {}, {}, {})
     }
 }
