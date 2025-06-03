@@ -15,15 +15,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-interface SyncQueue
+interface WriteSyncRepository
 
-internal class SyncQueueImpl(
+internal class WriteSyncRepositoryImpl(
     private val externalScope: CoroutineScope,
     private val appEventsRepository: AppEventsRepository,
     private val syncQueueDb: SyncQueueDao,
     private val ratingService: RatingService,
     private val mangaService: MangaService,
-) : SyncQueue {
+) : WriteSyncRepository {
     private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, externalScope) { event ->
         processQueue()
     }

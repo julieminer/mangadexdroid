@@ -10,7 +10,7 @@ import com.melonhead.lib_app_context.AppContext
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.*
-import com.melonhead.lib_read_status.ReadStatus
+import com.melonhead.lib_read_status.ReadStatusRepository
 import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
@@ -40,8 +40,8 @@ internal class MangaRepositoryImpl(
     private val atHomeService: AtHomeService,
     private val chapterDb: ChapterDao,
     private val mangaDb: MangaDao,
-    private val readStatus: ReadStatus,
-    
+    private val readStatusRepository: ReadStatusRepository,
+
     private val context: Context,
     private val chapterCache: ChapterCache,
     private val appEventsRepository: AppEventsRepository,
@@ -54,7 +54,7 @@ internal class MangaRepositoryImpl(
     }
 
     // combine all manga series and chapters
-    override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatus.readMarkers, chapterCache.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
+    override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers, chapterCache.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
         generateUIManga(dbSeries, dbChapters)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
 
@@ -119,7 +119,7 @@ internal class MangaRepositoryImpl(
         val uiManga = dbSeries.mapNotNull { manga ->
             var hasExternalChapters = false
             val chapters = dbChapters.filter { !it.blockedChapter }.filter { it.mangaId == manga.id }.map { chapter ->
-                val read = readStatus.isRead(chapter)
+                val read = readStatusRepository.isRead(chapter)
                 hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
                 UIChapter(
                     id = chapter.id,
@@ -206,7 +206,7 @@ internal class MangaRepositoryImpl(
 
         val manga = mangaDb.getAllSync()
         val chapters = chapterDb.getAllSync()
-        readStatus.refresh(manga, chapters)
+        readStatusRepository.refresh(manga, chapters)
         handleUnreadChapters()
 
         mutableRefreshStatus.value = MangaRefreshStatus.None
@@ -220,7 +220,7 @@ internal class MangaRepositoryImpl(
         mutableRefreshStatus.value = MangaRefreshStatus.FetchingChapters
         val manga = mangaDb.getAllSync()
         val newChapters = chapterDb.getAllSync()
-            .filter { !readStatus.isRead(it) }
+            .filter { !readStatusRepository.isRead(it) }
             .filter { !it.blockedChapter }
         chapterCache.cacheImagesForChapters(manga, newChapters)
 

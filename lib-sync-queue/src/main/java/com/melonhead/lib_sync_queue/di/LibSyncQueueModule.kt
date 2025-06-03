@@ -5,17 +5,18 @@ import com.melonhead.data_rating.di.DataRatingModule
 import com.melonhead.lib_app_data.di.LibAppDataModule
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import com.melonhead.lib_database.di.LibDbModule
-import com.melonhead.lib_sync_queue.SyncQueue
-import com.melonhead.lib_sync_queue.SyncQueueImpl
+import com.melonhead.lib_sync_queue.WriteSyncRepository
+import com.melonhead.lib_sync_queue.WriteSyncRepositoryImpl
 import org.koin.dsl.module
 
-val LibSyncQueueModule = module {
+val LibWriteSyncRepositoryModule = module {
     includes(LibDbModule)
     includes(LibAppDataModule)
     includes(LibAppEventsModule)
     includes(DataMangaModule)
     includes(DataRatingModule)
-    single<SyncQueue>(createdAtStart = true) {
-        SyncQueueImpl(get(), get(), get(), get(), get())
+    single<WriteSyncRepository>(createdAtStart = true) {
+        WriteSyncRepositoryImpl(get(), get(), get(), get(), get())
+    }
     }
 }

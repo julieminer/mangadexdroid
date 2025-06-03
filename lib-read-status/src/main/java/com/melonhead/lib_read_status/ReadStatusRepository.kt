@@ -21,13 +21,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
-interface ReadStatus {
+interface ReadStatusRepository {
     suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>)
     val readMarkers: Flow<List<ReadMarkerEntity>>
     fun isRead(chapter: ChapterEntity): Boolean
 }
 
-internal class ReadStatusImpl(
+internal class ReadStatusRepositoryImpl(
     private val context: Context,
     private val externalScope: CoroutineScope,
     private val readMarkerDb: ReadMarkerDao,
@@ -37,7 +37,7 @@ internal class ReadStatusImpl(
     private val mangaService: MangaService,
     private val appEventsRepository: AppEventsRepository,
     private val newChapterNotificationChannel: NewChapterNotificationChannel,
-) : ReadStatus {
+) : ReadStatusRepository {
 
     private val internalReadMarker = readMarkerDb.getAll()
     override val readMarkers: Flow<List<ReadMarkerEntity>>
@@ -81,7 +81,6 @@ internal class ReadStatusImpl(
                 val readStatus = readMarkerDb.isRead(it.mangaId, it.chapter)
                 readStatus == null && readChapters.contains(it.id)
             }
-
 
         if (chaptersToUpdate.isEmpty()) {
             return

@@ -12,7 +12,7 @@ import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_data.di.LibAppDataModule
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import com.melonhead.lib_chapter_cache.di.LibChapterCacheModule
-import com.melonhead.lib_read_status.di.LibReadStatusModule
+import com.melonhead.lib_read_status.di.LibReadStatusRepositoryModule
 import com.melonhead.lib_database.di.LibDbModule
 import com.melonhead.lib_notifications.di.LibNotificationsModule
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -24,7 +24,7 @@ val FeatureMangaListModule = module {
     includes(LibAppContextModule)
     includes(LibDbModule)
     includes(LibChapterCacheModule)
-    includes(LibReadStatusModule)
+    includes(LibReadStatusRepositoryModule)
     includes(LibAppDataModule)
 
     includes(DataUserModule)
