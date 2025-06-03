@@ -22,6 +22,9 @@ data class UIManga(
     @IgnoredOnParcel
     val coverAddress: String? = if (coverFilename == null) null else "https://mangadex.org/covers/$id/${coverFilename}.256.jpg"
 
+    @IgnoredOnParcel
+    val webAddress: String = "https://mangadex.org/title/$id"
+
     val longStrip: Boolean
         get() = tags.contains("Long Strip")
 }
