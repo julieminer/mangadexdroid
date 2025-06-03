@@ -5,8 +5,6 @@ import com.melonhead.lib_database.chapter.ChapterDBMigrations
 import com.melonhead.lib_database.chapter.ChapterDatabase
 import com.melonhead.lib_database.manga.MangaDBMigrations
 import com.melonhead.lib_database.manga.MangaDatabase
-import com.melonhead.lib_database.read_queue.ReadQueueDao
-import com.melonhead.lib_database.read_queue.ReadQueueDatabase
 import com.melonhead.lib_database.readmarkers.ReadMarkerDatabase
 import com.melonhead.lib_database.sync_queue.SyncQueueDao
 import com.melonhead.lib_database.sync_queue.SyncQueueDatabase
@@ -53,13 +51,6 @@ val LibDbModule = module {
     single(createdAtStart = true) {
         Room.databaseBuilder(
             get(),
-            ReadQueueDatabase::class.java, ReadQueueDao.TABLE_NAME
-        ).build()
-    }
-
-    single(createdAtStart = true) {
-        Room.databaseBuilder(
-            get(),
             SyncQueueDatabase::class.java, SyncQueueDao.TABLE_NAME
         ).addTypeConverter(
             get<SyncQueueEventTypeConverters>()
@@ -95,10 +86,6 @@ val LibDbModule = module {
 
     single {
         get<ReadMarkerDatabase>().readMarkersDao()
-    }
-
-    single {
-        get<ReadQueueDatabase>().readQueueDao()
     }
 
     single {

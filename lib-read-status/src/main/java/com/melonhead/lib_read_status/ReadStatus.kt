@@ -3,6 +3,7 @@ package com.melonhead.lib_read_status
 import android.content.Context
 import com.melonhead.data_manga.models.ReadingStatus
 import com.melonhead.data_manga.services.MangaService
+import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
@@ -10,8 +11,6 @@ import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
 import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
-import com.melonhead.lib_database.read_queue.ReadQueueDao
-import com.melonhead.lib_database.read_queue.ReadQueueEntity
 import com.melonhead.lib_database.readmarkers.ReadMarkerDao
 import com.melonhead.lib_database.readmarkers.ReadMarkerEntity
 import com.melonhead.lib_logging.Clog
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import com.melonhead.lib_app_data.AppData
 
 interface ReadStatus {
     suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>)
@@ -32,7 +30,6 @@ interface ReadStatus {
 internal class ReadStatusImpl(
     private val context: Context,
     private val externalScope: CoroutineScope,
-    private val readQueueDb: ReadQueueDao,
     private val readMarkerDb: ReadMarkerDao,
     private val appData: AppData,
     private val mangaDb: MangaDao,
@@ -85,17 +82,8 @@ internal class ReadStatusImpl(
                 readStatus == null && readChapters.contains(it.id)
             }
 
-        // remove read items from readQueueDB
-        // handles edge case where item is marked as read in another client
-        val readQueue = readQueueDb.getAllSync()
-        val completedQueue = readQueue.filter { it.chapterId in chaptersToUpdate.map { it.id } }
-        if (completedQueue.isNotEmpty()) {
-            Clog.i("ReadStatus.refresh: Clearing ${completedQueue.size} based on read status")
-        }
-        readQueueDb.deleteAll(*completedQueue.toTypedArray())
 
         if (chaptersToUpdate.isEmpty()) {
-            sendCompletedChapters()
             return
         }
 
@@ -110,33 +98,6 @@ internal class ReadStatusImpl(
             .map { ReadMarkerEntity.from(it, true) }
         readMarkerDb.update(*readMarkersToUpdate.toTypedArray())
 
-        sendCompletedChapters()
-    }
-
-    private fun sendCompletedChapters() {
-        externalScope.launch {
-            val readQueue = readQueueDb.getAllSync()
-            val chapters = readQueue.map { it to chapterDb.getChapterForId(it.chapterId) }
-
-            Clog.i("ReadStatus.sendCompletedChapters: Sending ${chapters.size} completed chapters to server")
-
-            chapters.forEach { (queue, chapter) ->
-                val success = mangaService.changeReadStatus(
-                    mangaId = chapter.mangaId,
-                    chapterId = chapter.id,
-                    readStatus = queue.read
-                )
-                if (success) {
-                    readQueueDb.delete(chapter.id)
-                } else if (queue.retryCount >= 3) {
-                    Clog.w("ReadStatus.sendCompletedChapters: Failed to send completed chapter to server 3 times, deleting from queue")
-                    readQueueDb.delete(chapter.id)
-                } else {
-                    Clog.i("ReadStatus.sendCompletedChapters: Failed to send completed chapter ${chapter.id} to server, will retry later")
-                    readQueueDb.update(queue.copy(retryCount = queue.retryCount + 1))
-                }
-            }
-        }
     }
 
     override fun isRead(chapter: ChapterEntity): Boolean {
@@ -164,14 +125,7 @@ internal class ReadStatusImpl(
     private suspend fun internalMarkSeriesReading(chapter: ChapterEntity, read: Boolean) {
         if (!read) return
         if (appData.autoMarkMangaReading.firstOrNull() != true) return
-
-        val manga = mangaDb.getMangaById(chapter.mangaId)
-        if (manga == null) {
-            Clog.e("ReadStatus.internalMarkSeriesReading: manga not found", NullPointerException("ReadStatus.internalMarkSeriesReading: manga not found"))
-            return
-        }
-
-        mangaService.changeSeriesReadingStatus(chapter.mangaId, ReadingStatus.Reading)
+        appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Reading.serialized()))
     }
 
     private suspend fun internalMarkSeriesComplete(chapter: ChapterEntity, read: Boolean) {
@@ -185,12 +139,9 @@ internal class ReadStatusImpl(
         }
 
         if (manga.lastChapter != chapter.chapter) return
-        mangaService.changeSeriesReadingStatus(chapter.mangaId, ReadingStatus.Completed)
-        appEventsRepository.postEvent(
-            SystemLogicEvents.PromptMangaRating(
-                chapter.mangaId
-            )
-        )
+
+        appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Completed.serialized()))
+        appEventsRepository.postEvent(SystemLogicEvents.PromptMangaRating(chapter.mangaId))
     }
 
     private suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean, read: Boolean) {
@@ -202,15 +153,6 @@ internal class ReadStatusImpl(
         if (read) {
             // TODO: notification event
             newChapterNotificationChannel.dismissNotification(context, chapter.mangaId, chapter.id)
-        }
-
-        val readQueueEntity = readQueueDb.get(chapter.id)
-        if (readQueueEntity == null) {
-            Clog.i("ReadStatus.markChapterRead: adding ${chapter.id} to readQueueDB")
-            readQueueDb.insert(ReadQueueEntity(chapterId = chapter.id, retryCount = 0, read = read))
-        } else {
-            Clog.i("ReadStatus.markChapterRead: updating ${chapter.id} in readQueueDB to read = $read")
-            readQueueDb.update(readQueueEntity.copy(read = read))
         }
 
         readMarkerDb.update(entity.copy(readStatus = read))

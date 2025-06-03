@@ -8,6 +8,8 @@ import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_data.di.LibAppDataModule
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import com.melonhead.lib_navigation.di.LibNavigationModule
+import com.melonhead.lib_read_status.di.LibReadStatusModule
+import com.melonhead.lib_sync_queue.di.LibSyncQueueModule
 import com.melonhead.mangadexfollower.AppNavigationMap
 import com.melonhead.mangadexfollower.navigation.MainActivityResolver
 import com.melonhead.mangadexfollower.ui.viewmodels.MainViewModel
@@ -19,6 +21,8 @@ val AppModule = module {
     includes(LibNavigationModule)
     includes(LibAppContextModule)
     includes(LibAppDataModule)
+    includes(LibSyncQueueModule)
+    includes(LibReadStatusModule)
 
     includes(FeatureAuthenticationModule)
     includes(FeatureMangaListModule)

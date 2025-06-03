@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.core.app.NotificationManagerCompat
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.data_manga.services.MangaService
-import com.melonhead.data_rating.services.RatingService
 import com.melonhead.data_shared.models.ui.*
 import com.melonhead.data_user.services.UserService
 import com.melonhead.lib_app_context.AppContext
@@ -42,13 +41,13 @@ internal class MangaRepositoryImpl(
     private val chapterDb: ChapterDao,
     private val mangaDb: MangaDao,
     private val readStatus: ReadStatus,
+    
     private val context: Context,
     private val chapterCache: ChapterCache,
     private val appEventsRepository: AppEventsRepository,
     private val newChapterNotificationChannel: NewChapterNotificationChannel,
     private val appContext: AppContext,
     private val mangaService: MangaService,
-    private val ratingService: RatingService,
 ): MangaRepository {
     private val refreshMangaThrottled: (AppEvent) -> Unit = throttleLatest(300L, externalScope) { event ->
         refreshManga((event as? UserEvent.RefreshManga)?.completionJob)
@@ -92,7 +91,7 @@ internal class MangaRepositoryImpl(
                                 refreshMangaThrottled(event)
                             }
                             is UserEvent.SetMarkChapterRead -> {
-//                                markChapterRead(event.mangaId, event.chapterId, event.read)
+                                // no-op, handled directly by other events
                             }
                             is UserEvent.SetChapterBlocked -> {
                                 markChapterBlocked(event.chapterId, event.blocked)
@@ -251,9 +250,7 @@ internal class MangaRepositoryImpl(
     }
 
     override fun rateManga(mangaId: String, rating: Int) {
-        externalScope.launch {
-            ratingService.setRating(mangaId, rating)
-        }
+        appEventsRepository.postEvent(UserEvent.SetMangaRating(mangaId, rating))
     }
 
     private fun markChapterBlocked(chapterId: String, blocked: Boolean) {

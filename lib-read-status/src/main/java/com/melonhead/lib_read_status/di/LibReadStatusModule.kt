@@ -13,7 +13,7 @@ val LibReadStatusModule = module {
     includes(LibAppDataModule)
     includes(LibNotificationsModule)
     includes(DataMangaModule)
-    single<ReadStatus> {
-        ReadStatusImpl(get(), get(), get(), get(), get(), get(), get(), get(), get(), get())
+    single<ReadStatus>(createdAtStart = true) {
+        ReadStatusImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
     }
 }
