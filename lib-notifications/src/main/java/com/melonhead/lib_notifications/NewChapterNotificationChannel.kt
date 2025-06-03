@@ -52,6 +52,7 @@ data class NewChapterNotificationChannel(
             .build()
     }
 
+    // TODO: this should use a simplified list (ie, list of manga titles and chapters)
     suspend fun post(context: Context, series: List<UIManga>, installDateSeconds: Long) {
         // set up channel
         createNotificationChannel(context)
