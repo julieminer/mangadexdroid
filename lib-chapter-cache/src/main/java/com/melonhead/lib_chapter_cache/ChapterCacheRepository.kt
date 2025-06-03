@@ -5,15 +5,19 @@ import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
+import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.downloadFile
+import com.melonhead.lib_read_status.ReadStatusRepository
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -40,7 +44,11 @@ internal class ChapterCacheRepositoryImpl(
     private val appContext: Context,
     private val httpClient: HttpClient,
     private val externalScope: CoroutineScope,
-    private val appEventsRepository: AppEventsRepository
+    private val appEventsRepository: AppEventsRepository,
+
+    private val chapterDb: ChapterDao,
+    private val mangaDb: MangaDao,
+    private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
 
     init {
@@ -70,6 +78,12 @@ internal class ChapterCacheRepositoryImpl(
                                 }
                             }
 
+                            is UserEvent.RefreshManga -> {
+                                launch {
+                                    cacheImagesForNewChapters(mangaDb.getAllSync(), chapterDb.getAllSync())
+                                }
+                            }
+
                             else -> {
                             }
                         }
@@ -78,6 +92,16 @@ internal class ChapterCacheRepositoryImpl(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        externalScope.launch {
+            combine(mangaDb.allSeries(), chapterDb.allChapters(), { manga, chapters ->
+                launch { cacheImagesForNewChapters(manga, chapters) }
+            })
+        }
+
+        externalScope.launch {
+            cacheImagesForNewChapters(mangaDb.getAllSync(), chapterDb.getAllSync())
         }
     }
 
@@ -126,6 +150,14 @@ internal class ChapterCacheRepositoryImpl(
         return successFiles.first().nameWithoutExtension.toInt()
     }
 
+    private suspend fun cacheImagesForNewChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+        val newChapters = chapters
+            .filter { !readStatusRepository.isRead(it) }
+            .filter { !it.blockedChapter }
+        cacheImagesForChapters(manga, newChapters)
+    }
+
+    // TODO: make this private
     override suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         cacheOperation {
             val cacheDirectory = appContext.cacheDir
