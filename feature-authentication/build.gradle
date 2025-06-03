@@ -32,7 +32,6 @@ dependencies {
     implementation project(':lib-core')
     implementation project(":lib-networking")
     implementation project(":lib-logging")
-    implementation project(":lib-notifications")
     implementation project(":lib-navigation")
     implementation project(":lib-app-context")
     implementation project(":lib-app-events")

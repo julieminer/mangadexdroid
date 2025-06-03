@@ -5,15 +5,13 @@ import com.melonhead.lib_app_data.di.LibAppDataModule
 import com.melonhead.lib_read_status.ReadStatusRepository
 import com.melonhead.lib_read_status.ReadStatusRepositoryImpl
 import com.melonhead.lib_database.di.LibDbModule
-import com.melonhead.lib_notifications.di.LibNotificationsModule
 import org.koin.dsl.module
 
 val LibReadStatusRepositoryModule = module {
     includes(LibDbModule)
     includes(LibAppDataModule)
-    includes(LibNotificationsModule)
     includes(DataMangaModule)
     single<ReadStatusRepository>(createdAtStart = true) {
-        ReadStatusRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
+        ReadStatusRepositoryImpl(get(), get(), get(), get(), get(), get(), get())
     }
 }

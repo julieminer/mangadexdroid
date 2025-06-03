@@ -1,27 +1,19 @@
 package com.melonhead.feature_authentication
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationManagerCompat
-import com.melonhead.lib_app_data.AppData
 import com.melonhead.data_authentication.models.AuthToken
 import com.melonhead.data_authentication.models.OAuthToken
 import com.melonhead.data_authentication.services.LoginService
 import com.melonhead.data_user.services.UserService
-import com.melonhead.lib_app_context.AppContext
+import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_logging.Clog
-import com.melonhead.lib_notifications.AuthFailedNotificationChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlin.math.log
-import kotlin.math.sign
 
 interface AuthRepository {
     @Deprecated("Deprecated, use oauth variant")
@@ -30,13 +22,10 @@ interface AuthRepository {
 }
 
 internal class AuthRepositoryImpl(
-    private val context: Context,
     private val appData: AppData,
     private val loginService: LoginService,
     private val userService: UserService,
     private val appEventsRepository: AppEventsRepository,
-    private val authFailedNotificationChannel: AuthFailedNotificationChannel,
-    private val appContext: AppContext,
     externalScope: CoroutineScope,
 ) : AuthRepository {
     init {
@@ -66,10 +55,6 @@ internal class AuthRepositoryImpl(
         suspend fun signOut() {
             Clog.e("Signing out, refresh failed", Exception())
             appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
-            if (appContext.isInForeground) return
-            val notificationManager = NotificationManagerCompat.from(context)
-            if (!notificationManager.areNotificationsEnabled()) return
-            authFailedNotificationChannel.postAuthFailed(context)
             appData.updateUserId("")
         }
 
@@ -107,10 +92,6 @@ internal class AuthRepositoryImpl(
         suspend fun signOut() {
             Clog.e("Signing out, refresh failed", Exception())
             appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
-            if (appContext.isInForeground) return
-            val notificationManager = NotificationManagerCompat.from(context)
-            if (!notificationManager.areNotificationsEnabled()) return
-            authFailedNotificationChannel.postAuthFailed(context)
             appData.updateUserId("")
         }
 

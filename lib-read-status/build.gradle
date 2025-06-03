@@ -15,7 +15,6 @@ dependencies {
     implementation project(":lib-database")
     implementation project(":lib-logging")
     implementation project(":lib-networking")
-    implementation project(":lib-notifications")
     implementation project(":lib-app-events")
     implementation project(":lib-app-data")
     implementation project(":data-manga")

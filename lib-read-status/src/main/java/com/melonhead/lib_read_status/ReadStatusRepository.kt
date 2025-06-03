@@ -1,6 +1,5 @@
 package com.melonhead.lib_read_status
 
-import android.content.Context
 import com.melonhead.data_manga.models.ReadingStatus
 import com.melonhead.data_manga.services.MangaService
 import com.melonhead.lib_app_data.AppData
@@ -14,7 +13,6 @@ import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_database.readmarkers.ReadMarkerDao
 import com.melonhead.lib_database.readmarkers.ReadMarkerEntity
 import com.melonhead.lib_logging.Clog
-import com.melonhead.lib_notifications.NewChapterNotificationChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -28,7 +26,6 @@ interface ReadStatusRepository {
 }
 
 internal class ReadStatusRepositoryImpl(
-    private val context: Context,
     private val externalScope: CoroutineScope,
     private val readMarkerDb: ReadMarkerDao,
     private val appData: AppData,
@@ -36,7 +33,6 @@ internal class ReadStatusRepositoryImpl(
     private val chapterDb: ChapterDao,
     private val mangaService: MangaService,
     private val appEventsRepository: AppEventsRepository,
-    private val newChapterNotificationChannel: NewChapterNotificationChannel,
 ) : ReadStatusRepository {
 
     private val internalReadMarker = readMarkerDb.getAll()
@@ -148,11 +144,6 @@ internal class ReadStatusRepositoryImpl(
             mangaId = chapter.mangaId,
             chapter = chapter.chapter
         ) ?: return
-
-        if (read) {
-            // TODO: notification event
-            newChapterNotificationChannel.dismissNotification(context, chapter.mangaId, chapter.id)
-        }
 
         readMarkerDb.update(entity.copy(readStatus = read))
         if (isDuplicate) return
