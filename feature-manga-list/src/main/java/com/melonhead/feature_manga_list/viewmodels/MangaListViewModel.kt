@@ -166,4 +166,9 @@ internal class MangaListViewModel(
     fun dismissRatingModal() {
         mutableShowRatingDialog.value = null
     }
+
+    fun viewMangaOnWeb(context: Context, manga: UIManga) {
+        val intent = Intent(Intent.ACTION_VIEW, manga.webAddress.toUri())
+        context.startActivity(intent)
+    }
 }

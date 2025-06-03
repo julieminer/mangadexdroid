@@ -28,7 +28,6 @@ import com.melonhead.lib_core.extensions.Previews
 import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.lib_core.theme.MangadexFollowerTheme
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun MangaCoverListItem(
     modifier: Modifier = Modifier,
