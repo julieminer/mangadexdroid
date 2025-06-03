@@ -15,6 +15,7 @@ import com.melonhead.lib_chapter_cache.di.LibChapterCacheRepositoryModule
 import com.melonhead.lib_read_status.di.LibReadStatusRepositoryModule
 import com.melonhead.lib_database.di.LibDbModule
 import com.melonhead.lib_notifications.di.LibNotificationsModule
+import com.melonhead.lib_sync_queue.di.LibWriteSyncRepositoryModule
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
@@ -26,6 +27,7 @@ val FeatureMangaListModule = module {
     includes(LibChapterCacheRepositoryModule)
     includes(LibReadStatusRepositoryModule)
     includes(LibAppDataModule)
+    includes(LibWriteSyncRepositoryModule)
 
     includes(DataUserModule)
     includes(DataAtHomeModule)
@@ -34,10 +36,6 @@ val FeatureMangaListModule = module {
 
     single<MangaRepository>(createdAtStart = true) {
         MangaRepositoryImpl(
-            get(),
-            get(),
-            get(),
-            get(),
             get(),
             get(),
             get(),

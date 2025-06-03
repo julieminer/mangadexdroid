@@ -1,30 +1,21 @@
 package com.melonhead.feature_manga_list
 
-import android.content.Context
-import androidx.core.app.NotificationManagerCompat
 import com.melonhead.data_at_home.AtHomeService
-import com.melonhead.data_manga.services.MangaService
 import com.melonhead.data_shared.models.ui.*
-import com.melonhead.data_user.services.UserService
-import com.melonhead.lib_app_context.AppContext
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.*
 import com.melonhead.lib_read_status.ReadStatusRepository
-import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
-import com.melonhead.lib_database.extensions.from
 import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
-import com.melonhead.lib_notifications.NewChapterNotificationChannel
 import com.melonhead.lib_chapter_cache.ChapterCacheRepository
+import com.melonhead.lib_sync_queue.ReadSyncRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import java.util.concurrent.CompletableFuture
 
 internal interface MangaRepository {
     val manga: Flow<List<UIManga>>
@@ -35,33 +26,24 @@ internal interface MangaRepository {
 
 internal class MangaRepositoryImpl(
     private val externalScope: CoroutineScope,
-    private val userService: UserService,
     private val appData: AppData,
     private val atHomeService: AtHomeService,
     private val chapterDb: ChapterDao,
     private val mangaDb: MangaDao,
     private val readStatusRepository: ReadStatusRepository,
-
-    private val context: Context,
     private val chapterCacheRepository: ChapterCacheRepository,
+
     private val appEventsRepository: AppEventsRepository,
-    private val newChapterNotificationChannel: NewChapterNotificationChannel,
-    private val appContext: AppContext,
-    private val mangaService: MangaService,
+    private val readSyncRepository: ReadSyncRepository,
 ): MangaRepository {
-    private val refreshMangaThrottled: (AppEvent) -> Unit = throttleLatest(300L, externalScope) { event ->
-        refreshManga((event as? UserEvent.RefreshManga)?.completionJob)
-    }
+
+    override val refreshStatus: Flow<MangaRefreshStatus>
+        get() = readSyncRepository.refreshStatus
 
     // combine all manga series and chapters
     override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers, chapterCacheRepository.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
         generateUIManga(dbSeries, dbChapters)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
-
-    private val mutableRefreshStatus = MutableStateFlow<MangaRefreshStatus>(MangaRefreshStatus.None)
-    override val refreshStatus = mutableRefreshStatus.shareIn(externalScope, replay = 0, started = SharingStarted.WhileSubscribed())
-
-    private var isLoggedIn: Boolean = false
 
     init {
         Clog.i("MangaRepository init")
@@ -72,27 +54,6 @@ internal class MangaRepositoryImpl(
                 appEventsRepository.events.collectLatest { event ->
                     launch {
                         when (event) {
-                            is AuthenticationEvent.LoggedIn -> {
-                                if (!isLoggedIn) {
-                                    isLoggedIn = true
-                                    Clog.i("Refresh: Logged in")
-                                    refreshMangaThrottled(event)
-                                }
-                            }
-                            is AuthenticationEvent.LoggedOut -> {
-                                isLoggedIn = false
-                            }
-                            is AppLifecycleEvent.AppForegrounded -> {
-                                Clog.i("Refresh: Foregrounded")
-                                refreshMangaThrottled(event)
-                            }
-                            is UserEvent.RefreshManga -> {
-                                Clog.i("Refresh: Refresh event")
-                                refreshMangaThrottled(event)
-                            }
-                            is UserEvent.SetMarkChapterRead -> {
-                                // no-op, handled directly by other events
-                            }
                             is UserEvent.SetChapterBlocked -> {
                                 markChapterBlocked(event.chapterId, event.blocked)
                             }
@@ -109,9 +70,6 @@ internal class MangaRepositoryImpl(
                 e.printStackTrace()
             }
         }
-
-        Clog.i("Refresh: init")
-        refreshMangaThrottled(AppLifecycleEvent.AppForegrounded)
     }
 
     private fun generateUIManga(dbSeries: List<MangaEntity>, dbChapters: List<ChapterEntity>): List<UIManga> {
@@ -154,84 +112,6 @@ internal class MangaRepositoryImpl(
         val allRead = uiManga.filter { it.chapters.all { it.read } }.sortedByDescending { it.chapters.first().createdDate }
 
         return hasUnread + allRead
-    }
-
-    // note: unit needs to be included as a param for the throttleLatest call above
-    private fun refreshManga(refreshCompletable: (CompletableFuture<Unit>)?) = externalScope.launch {
-        // wait for refresh token to complete
-        val refreshCompletionJob = CompletableFuture<Unit>()
-        appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))
-        refreshCompletionJob.await()
-
-        val token = appData.getToken()
-        if (token == null) {
-            Clog.i("Failed to refresh token")
-            return@launch
-        }
-
-        Clog.i("refreshManga")
-
-        mutableRefreshStatus.value = MangaRefreshStatus.Following
-        // fetch chapters from server
-        val chaptersResponse = userService.getFollowedChapters()
-        val chapterEntities = chaptersResponse.map { ChapterEntity.from(it) }
-        val newChapters = chapterEntities.filter { !chapterDb.containsChapter(it.id) }
-
-        Clog.i("New chapters: ${newChapters.count()}")
-
-        if (newChapters.isNotEmpty()) {
-            mutableRefreshStatus.value = MangaRefreshStatus.MangaSeries
-            // add chapters to DB
-            chapterDb.insertAll(*newChapters.toTypedArray())
-
-            // map app chapters into the manga ids
-            val mangaIds = chaptersResponse.mapNotNull { chapters -> chapters.relationships?.firstOrNull { it.type == "manga" }?.id }.toSet()
-
-            // fetch manga series info
-            Clog.i("New manga: ${mangaIds.count()}")
-
-            if (mangaIds.isNotEmpty()) {
-                val mangaSeries = mangaService.getManga(mangaIds.toList())
-                val manga = mangaSeries.map {
-                    // grab the chosen title from the DB
-                    MangaEntity.from(it, mangaDb.getMangaByIdAsync(it.id).first()?.chosenTitle)
-                }
-
-                // insert new series into local db
-                mangaDb.insertAll(*manga.toTypedArray())
-            }
-        }
-
-        mutableRefreshStatus.value = MangaRefreshStatus.ReadStatus
-
-        val manga = mangaDb.getAllSync()
-        val chapters = chapterDb.getAllSync()
-        readStatusRepository.refresh(manga, chapters)
-        handleUnreadChapters()
-
-        mutableRefreshStatus.value = MangaRefreshStatus.None
-        appData.updateLastRefreshDate()
-
-        // mark refresh as completed
-        refreshCompletable?.complete(Unit)
-    }
-
-    private suspend fun handleUnreadChapters() {
-        mutableRefreshStatus.value = MangaRefreshStatus.FetchingChapters
-        val manga = mangaDb.getAllSync()
-        val newChapters = chapterDb.getAllSync()
-            .filter { !readStatusRepository.isRead(it) }
-            .filter { !it.blockedChapter }
-        chapterCacheRepository.cacheImagesForChapters(manga, newChapters)
-
-        if (appContext.isInForeground) return
-        val notificationManager = NotificationManagerCompat.from(context)
-        if (!notificationManager.areNotificationsEnabled()) return
-        val installDateSeconds = appData.installDateSeconds.firstOrNull() ?: 0L
-        Clog.i("Posting notification for new chapters")
-
-        val notifyChapters = generateUIManga(manga, newChapters)
-        newChapterNotificationChannel.post(context, notifyChapters, installDateSeconds)
     }
 
     // currently trying to deprecate this function, and use chapterCache directly
