@@ -15,9 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-interface SyncQueue {
-
-}
+interface SyncQueue
 
 internal class SyncQueueImpl(
     private val externalScope: CoroutineScope,
