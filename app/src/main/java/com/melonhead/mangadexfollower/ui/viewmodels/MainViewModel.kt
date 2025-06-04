@@ -50,10 +50,8 @@ class MainViewModel(
     }
 
     fun parseIntent(context: Context, intent: Intent) {
-        val mangaJson = intent.getStringExtra(NewChapterNotificationChannel.MANGA_EXTRA) ?: return
-        val chapterJson = intent.getStringExtra(NewChapterNotificationChannel.CHAPTER_EXTRA) ?: return
-        val manga: UIManga = Json.decodeFromString(mangaJson)
-        val chapter: UIChapter = Json.decodeFromString(chapterJson)
-        appEventsRepository.postEvent(UserEvent.OpenedNotification(context, manga, chapter))
+        val mangaId = intent.getStringExtra(NewChapterNotificationChannel.MANGA_ID_EXTRA) ?: return
+        val chapterId = intent.getStringExtra(NewChapterNotificationChannel.CHAPTER_ID_EXTRA) ?: return
+        appEventsRepository.postEvent(UserEvent.OpenedNotification(context, mangaId, chapterId))
     }
 }

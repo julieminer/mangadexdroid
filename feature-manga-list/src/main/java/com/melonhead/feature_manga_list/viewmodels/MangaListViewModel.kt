@@ -50,7 +50,8 @@ internal class MangaListViewModel(
         viewModelScope.launch {
             appEventsRepository.events.collectLatest { event ->
                 if (event is UserEvent.OpenedNotification) {
-                    onChapterClicked(event.context, event.manga, event.chapter)
+                    // TODO: fix this
+//                    onChapterClicked(event.context, event.manga, event.chapter)
                 }
 
                 if (event is SystemLogicEvents.PromptMangaRating) {

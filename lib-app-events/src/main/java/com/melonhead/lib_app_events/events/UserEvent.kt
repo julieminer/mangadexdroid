@@ -24,7 +24,7 @@ sealed class UserEvent: AppEvent {
 
     // on opening chapter from a notification
     // TODO: this isn't working properly
-    data class OpenedNotification(val context: Context, val manga: UIManga, val chapter: UIChapter): UserEvent()
+    data class OpenedNotification(val context: Context, val mangaId: String, val chapterId: String): UserEvent()
 
     // on setting the manga rating
     data class SetMangaRating(val mangaId: String, val rating: Int): UserEvent()
