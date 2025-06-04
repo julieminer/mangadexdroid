@@ -17,6 +17,7 @@ import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_notifications.NewChapterNotificationChannel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
@@ -30,16 +31,18 @@ class MainViewModel(
     private val appEventsRepository: AppEventsRepository,
     private val appData: AppData,
 ): ViewModel() {
-    private val mutableLoginStatus = MutableStateFlow<LoginStatus?>(null)
+    private val mutableLoginStatus = MutableStateFlow<LoginStatus?>(LoginStatus.LoggingIn)
     val loginStatus = mutableLoginStatus.asLiveData(viewModelScope.coroutineContext)
 
     init {
         viewModelScope.launch {
             combine(appEventsRepository.events, appData.token) { event, token ->
-                when (event) {
+                event to token
+            }.collectLatest { input ->
+                when (input.first) {
                     is AuthenticationEvent.LoggedIn, is AuthenticationEvent.LoggedOut -> {
-                        if (token == null) {
-                            Clog.w("Setting status to logged out: event = ${event}, token is null")
+                        if (input.second == null) {
+                            Clog.w("Setting status to logged out: event = ${input.first}, token is null")
                             mutableLoginStatus.value = LoginStatus.LoggedOut
                         } else {
                             mutableLoginStatus.value = LoginStatus.LoggedIn
