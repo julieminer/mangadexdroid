@@ -27,7 +27,7 @@ val LibNetworkingModule = module {
                 default().rate(5, 1, DurationUnit.SECONDS)
             }
             install(Logging) {
-                level = LogLevel.BODY
+                level = LogLevel.INFO
                 logger = object: Logger {
                     override fun log(message: String) {
                         Clog.d(message)
