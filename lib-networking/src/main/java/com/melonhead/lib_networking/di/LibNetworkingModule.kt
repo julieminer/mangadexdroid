@@ -46,7 +46,7 @@ val LibNetworkingModule = module {
                     !response.status.isSuccess() && response.status.value != 301 && response.status.value != 429 && response.status.value != 404
                 }
                 retryOnExceptionIf { _, cause ->
-                    cause is ConnectTimeoutException || cause is JsonConvertException
+                    cause is ConnectTimeoutException || cause is JsonConvertException || cause is ConnectException
                 }
                 exponentialDelay()
             }
