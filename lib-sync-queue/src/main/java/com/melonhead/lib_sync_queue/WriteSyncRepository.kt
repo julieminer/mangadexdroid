@@ -36,12 +36,15 @@ internal class WriteSyncRepositoryImpl(
     init {
         Clog.i("ReadStatus.init")
         externalScope.launch {
-            // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
                 appEventsRepository.events.collectLatest { event ->
                     launch {
                         when (event) {
+                            is AuthenticationEvent.LoggedIn -> {
+                                processQueueThrottled(Unit)
+                            }
+
                             is UserEvent.SetMarkChapterRead -> {
                                 markChapterRead(event.mangaId, event.chapterId, event.read)
                             }
@@ -55,7 +58,7 @@ internal class WriteSyncRepositoryImpl(
                             }
 
                             is UserEvent.RefreshManga -> {
-                                processQueue()
+                                processQueueThrottled(Unit)
                             }
 
                             else -> {
@@ -67,8 +70,6 @@ internal class WriteSyncRepositoryImpl(
                 e.printStackTrace()
             }
         }
-
-        processQueueThrottled(Unit)
     }
 
     private fun setMangaRating(mangaId: String, rating: Int) = externalScope.launch {
@@ -94,11 +95,11 @@ internal class WriteSyncRepositoryImpl(
 
             val token = appData.getToken()
             if (token == null) {
-                Clog.i("Failed to refresh token")
+                Clog.i("Failed to refresh token or has not logged in previously")
                 return@launch
             }
 
-            val syncItems = syncQueueDb.getAllSync().filter { it.retryCount < 3 }
+            val syncItems = syncQueueDb.getAllSync()
             for (item in syncItems) {
                 val success = when (item.event) {
                     is SyncQueueEvent.ChangeRating -> {
