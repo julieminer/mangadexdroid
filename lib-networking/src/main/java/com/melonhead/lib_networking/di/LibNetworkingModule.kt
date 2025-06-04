@@ -4,6 +4,7 @@ import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.ratelimit.RateLimit
 import com.melonhead.lib_networking.ratelimit.impl.default
 import com.melonhead.lib_networking.ratelimit.impl.rate
+import com.melonhead.lib_networking.ratelimit.impl.select
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.network.sockets.ConnectTimeoutException
@@ -17,13 +18,16 @@ import io.ktor.serialization.JsonConvertException
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
+import java.net.ConnectException
 import kotlin.time.DurationUnit
 
 val LibNetworkingModule = module {
     single {
         HttpClient(CIO) {
             install(RateLimit) {
-                // globally set a 5 permit per 1 second rate-limiting
+                select { it.url.toString().contains("api.mangadex.org") }.rate(1, 3, DurationUnit.SECONDS)
+                select { it.url.toString().contains("auth.mangadex.org") }.rate(1, 3, DurationUnit.SECONDS)
+                // set default rate to 5 requests per 1 second
                 default().rate(5, 1, DurationUnit.SECONDS)
             }
             install(Logging) {

@@ -1,5 +1,6 @@
 package com.melonhead.data_shared.models.ui
 
+// TODO: move this into general app events
 sealed class MangaRefreshStatus {
     val text: String
         get() = when (this) {
