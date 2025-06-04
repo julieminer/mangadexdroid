@@ -154,6 +154,7 @@ internal class ChapterCacheRepositoryImpl(
         val newChapters = chapters
             .filter { !readStatusRepository.isRead(it) }
             .filter { !it.blockedChapter }
+            .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
         cacheImagesForChapters(manga, newChapters)
     }
 
