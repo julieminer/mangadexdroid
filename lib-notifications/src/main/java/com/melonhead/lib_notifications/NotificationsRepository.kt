@@ -9,9 +9,11 @@ import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.manga.MangaDao
+import com.melonhead.lib_notifications.models.ChapterNotification
 import com.melonhead.lib_read_status.ReadStatusRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
@@ -63,18 +65,26 @@ internal class NotificationsRepositoryImpl(
         }
 
         externalScope.launch {
-            chapterDb.getAll().collectLatest {
+            combine(mangaDb.allSeries(), chapterDb.allChapters()) { manga, chapters ->
                 launch {
                     if (appContext.isInForeground) return@launch
                     val notificationManager = NotificationManagerCompat.from(context)
                     if (!notificationManager.areNotificationsEnabled()) return@launch
-                    val newChapters = chapterDb.getAllSync()
+                    val installDateSeconds = appData.installDateSeconds.firstOrNull() ?: 0L
+                    val newChapters = chapters
                         .filter { !readStatusRepository.isRead(it) }
                         .filter { !it.blockedChapter }
+                        .filter { it.createdAt.epochSeconds >= installDateSeconds }
+                        .map {
+                            ChapterNotification(
+                                chapterId = it.id,
+                                chapterTitle = it.chapterTitle ?: "${it.chapter}",
+                                mangaId = it.mangaId,
+                                mangaTitle = manga.find { manga -> manga.id == it.mangaId }?.chosenTitle ?: "",
+                            )
+                        }
 
-                    val installDateSeconds = appData.installDateSeconds.firstOrNull() ?: 0L
-                    // TODO: finish this
-//                newChapterNotificationChannel.post(context, newChapters, installDateSeconds)
+                    newChapterNotificationChannel.post(context, newChapters, installDateSeconds)
                 }
             }
         }

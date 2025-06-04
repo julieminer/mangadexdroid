@@ -10,11 +10,10 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.TaskStackBuilder
-import com.melonhead.data_shared.models.ui.UIChapter
-import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_navigation.Navigator
 import com.melonhead.lib_navigation.keys.ActivityKey
+import com.melonhead.lib_notifications.models.ChapterNotification
 import kotlinx.coroutines.delay
 
 data class NewChapterNotificationChannel(
@@ -28,23 +27,22 @@ data class NewChapterNotificationChannel(
         }
     }
 
-    private fun pendingIntent(context: Context, uiManga: UIManga, uiChapter: UIChapter): PendingIntent? {
+    private fun pendingIntent(context: Context, mangaId: String, chapterId: String): PendingIntent? {
         val mainActivityIntent = navigator.intentForKey(context, ActivityKey.MainActivity)
 
-        mainActivityIntent.putExtra(MANGA_EXTRA, uiManga)
-        mainActivityIntent.putExtra(CHAPTER_EXTRA, uiChapter)
+        mainActivityIntent.putExtra(MANGA_ID_EXTRA, mangaId)
+        mainActivityIntent.putExtra(CHAPTER_ID_EXTRA, chapterId)
 
         return TaskStackBuilder.create(context).run {
             addNextIntentWithParentStack(mainActivityIntent)
-            getPendingIntent(uiChapter.id.hashCode(), PendingIntent.FLAG_IMMUTABLE)
+            getPendingIntent(chapterId.hashCode(), PendingIntent.FLAG_IMMUTABLE)
         }
     }
 
-    private fun buildNotification(context: Context, pendingIntent: PendingIntent, uiManga: UIManga, uiChapter: UIChapter): Notification {
-        val text = if (uiChapter.title.isNullOrBlank()) uiChapter.chapter else "${uiChapter.chapter} - ${uiChapter.title}"
+    private fun buildNotification(context: Context, pendingIntent: PendingIntent, mangaTitle: String, chapterTitle: String): Notification {
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(uiManga.title)
-            .setContentText(text)
+            .setContentTitle(mangaTitle)
+            .setContentText(chapterTitle)
             .setSmallIcon(R.drawable.ic_notification_icon)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
@@ -52,27 +50,19 @@ data class NewChapterNotificationChannel(
             .build()
     }
 
-    // TODO: this should use a simplified list (ie, list of manga titles and chapters)
-    suspend fun post(context: Context, series: List<UIManga>, installDateSeconds: Long) {
+    suspend fun post(context: Context, series: List<ChapterNotification>, installDateSeconds: Long) {
         // set up channel
         createNotificationChannel(context)
 
         val notificationManager = NotificationManagerCompat.from(context)
 
         Clog.i("post: New chapters for ${series.count()} manga")
-        series.forEach { manga ->
-            manga.chapters.filter { it.createdDate >= installDateSeconds }.forEach chapters@{ uiChapter ->
-                val pendingIntent = pendingIntent(context, manga, uiChapter) ?: return@chapters
-                val notification = buildNotification(context, pendingIntent, manga, uiChapter)
-                notificationManager.notify(notificationId(manga, uiChapter), notification)
-                delay(1000) // ensures android actually posts all notifications
-            }
+        series.forEach { chapter ->
+            val pendingIntent = pendingIntent(context, chapter.mangaId, chapter.chapterId) ?: return@forEach
+            val notification = buildNotification(context, pendingIntent, chapter.mangaTitle, chapter.chapterTitle)
+            notificationManager.notify(notificationId(chapter), notification)
+            delay(1000) // ensures android actually posts all notifications
         }
-    }
-
-    fun dismissNotification(context: Context, manga: UIManga, chapter: UIChapter) {
-        val notificationManager = NotificationManagerCompat.from(context)
-        notificationManager.cancel(notificationId(manga, chapter))
     }
 
     fun dismissNotification(context: Context, mangaId: String, chapterId: String) {
@@ -80,13 +70,13 @@ data class NewChapterNotificationChannel(
         notificationManager.cancel(mangaId.hashCode() + chapterId.hashCode())
     }
 
-    private fun notificationId(manga: UIManga, chapter: UIChapter): Int {
-        return manga.id.hashCode() + chapter.id.hashCode()
+    private fun notificationId(chapterNotification: ChapterNotification): Int {
+        return chapterNotification.mangaId.hashCode() + chapterNotification.chapterId.hashCode()
     }
 
     companion object {
-        const val MANGA_EXTRA = "manga_extra"
-        const val CHAPTER_EXTRA = "chapter_extra"
+        const val MANGA_ID_EXTRA = "manga_id_extra"
+        const val CHAPTER_ID_EXTRA = "chapter_id_extra"
         private const val CHANNEL_ID = "new_chapters"
         private const val CHANNEL_NAME = "New Chapter"
     }
