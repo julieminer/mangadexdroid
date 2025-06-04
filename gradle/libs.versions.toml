@@ -48,7 +48,6 @@ ext-junit = { module = "androidx.test.ext:junit", version.ref = "junitExtVersion
 firebase-analytics-ktx = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebaseAnalyticsKtxVersion" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBomVersion" }
 firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx", version.ref = "crashlyticsVersion" }
-firebase-database-ktx = { module = "com.google.firebase:firebase-database-ktx" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koinAndroidVersion" }
 koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koinAndroidVersion" }
 koin-ktor = { group = "io.insert-koin", name = "koin-ktor", version.ref = "koinKtorVersion" }
@@ -78,7 +77,7 @@ common-test = ["lib-junit"]
 
 compose = ["coil-compose", "material3", "activity-compose", "material-icons-extended", "runtime-livedata", "compose-ui", "compose-ui-tooling-preview"]
 compose-debug = ["compose-ui-test-manifest", "compose-ui-tooling"]
-firebase = ["firebase-crashlytics-ktx", "firebase-analytics-ktx", "firebase-database-ktx"]
+firebase = ["firebase-crashlytics-ktx", "firebase-analytics-ktx"]
 koin = ["koin-android", "koin-compose"]
 ktor = ["ktor-client", "ktor-client-content-negotiation", "ktor-client-logging", "ktor-serialization", "koin-ktor", "kotlinx-serialization"]
 

@@ -14,10 +14,16 @@ import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_notifications.NewChapterNotificationChannel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
 import kotlinx.serialization.json.Json
 
 class MainViewModel(
@@ -25,14 +31,34 @@ class MainViewModel(
     private val appEventsRepository: AppEventsRepository,
     private val appData: AppData,
 ): ViewModel() {
-    val loginStatus = appEventsRepository.events.mapNotNull {
-        when (it) {
-            is AuthenticationEvent.LoggedIn -> LoginStatus.LoggedIn
-            is AuthenticationEvent.LoggedOut -> LoginStatus.LoggedOut
-            is AuthenticationEvent.LoggingIn -> LoginStatus.LoggingIn
-            else -> null
+    private val mutableLoginStatus = MutableStateFlow<LoginStatus?>(LoginStatus.LoggingIn)
+    val loginStatus = mutableLoginStatus.asLiveData(viewModelScope.coroutineContext)
+
+    init {
+        viewModelScope.launch {
+            combine(appEventsRepository.events, appData.token) { event, token ->
+                event to token
+            }.collectLatest { input ->
+                when (input.first) {
+                    is AuthenticationEvent.LoggedIn, is AuthenticationEvent.LoggedOut -> {
+                        if (input.second == null) {
+                            Clog.w("Setting status to logged out: event = ${input.first}, token is null")
+                            mutableLoginStatus.value = LoginStatus.LoggedOut
+                        } else {
+                            mutableLoginStatus.value = LoginStatus.LoggedIn
+                        }
+                    }
+                    is AuthenticationEvent.LoggingIn -> {
+                        mutableLoginStatus.value = LoginStatus.LoggingIn
+                    }
+                }
+            }
         }
-    }.asLiveData(viewModelScope.coroutineContext)
+
+        viewModelScope.launch {
+            mutableLoginStatus.value = if (appData.token.firstOrNull() != null) LoginStatus.LoggedIn else LoginStatus.LoggedOut
+        }
+    }
 
     val clientDetails = flow<Triple<String, String, String>> {
         appData.getClient()
@@ -50,10 +76,8 @@ class MainViewModel(
     }
 
     fun parseIntent(context: Context, intent: Intent) {
-        val mangaJson = intent.getStringExtra(NewChapterNotificationChannel.MANGA_EXTRA) ?: return
-        val chapterJson = intent.getStringExtra(NewChapterNotificationChannel.CHAPTER_EXTRA) ?: return
-        val manga: UIManga = Json.decodeFromString(mangaJson)
-        val chapter: UIChapter = Json.decodeFromString(chapterJson)
-        appEventsRepository.postEvent(UserEvent.OpenedNotification(context, manga, chapter))
+        val mangaId = intent.getStringExtra(NewChapterNotificationChannel.MANGA_ID_EXTRA) ?: return
+        val chapterId = intent.getStringExtra(NewChapterNotificationChannel.CHAPTER_ID_EXTRA) ?: return
+        appEventsRepository.postEvent(UserEvent.OpenedNotification(context, mangaId, chapterId))
     }
 }

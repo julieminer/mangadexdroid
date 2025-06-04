@@ -26,6 +26,7 @@ dependencies {
     implementation project(':lib-read-status')
     implementation project(':lib-navigation')
     implementation project(':lib-app-data')
+    implementation project(':lib-sync-queue')
     implementation project(':data-shared')
     implementation project(":data-user")
     implementation project(":data-at-home")

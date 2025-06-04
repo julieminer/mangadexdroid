@@ -12,11 +12,14 @@ dependencies {
     testImplementation libs.bundles.common.test
     implementation libs.bundles.koin
 
+
+    implementation project(":lib-core")
     implementation project(":lib-database")
     implementation project(":lib-logging")
     implementation project(":lib-networking")
     implementation project(':lib-app-data')
     implementation project(':lib-app-events')
+    implementation project(":lib-read-status")
     implementation project(":data-at-home")
 }
 

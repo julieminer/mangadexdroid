@@ -3,20 +3,13 @@ package com.melonhead.lib_app_data
 import android.content.Context
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
 import com.melonhead.lib_app_data.models.RenderStyle
-import com.melonhead.lib_database.extensions.addValueEventListenerFlow
-import com.melonhead.lib_database.firebase.FirebaseDbUser
 import com.melonhead.lib_app_data.extensions.dataStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
@@ -52,43 +45,20 @@ interface AppData {
 
 internal class AppDataImpl(
     private val appContext: Context,
-    externalScope: CoroutineScope,
 ): AppData {
-    private val firebaseDb = Firebase.database
-
     private val CLIENT_ID = stringPreferencesKey("client_id")
     private val CLIENT_SECRET = stringPreferencesKey("client_secret")
     private val CLIENT_EMAIL = stringPreferencesKey("client_email")
     private val AUTH_TOKEN = stringPreferencesKey("auth_token")
     private val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
     private val USER_ID = stringPreferencesKey("user_id")
-
-    private var hasFetchedDbUser = false
+    private val INSTALL_DATE = longPreferencesKey("install_date")
+    private val REFRESH_TIME = longPreferencesKey("refresh_time")
+    private val AUTO_MARK_MANGA_COMPLETED = booleanPreferencesKey("auto_mark_manga_completed")
+    private val AUTO_MARK_MANGA_READING = booleanPreferencesKey("auto_mark_manga_reading")
 
     private val tokenMutex = Mutex()
     private val clientMutex = Mutex()
-
-    init {
-        externalScope.launch(IO) {
-            delay(100L)
-            try {
-                userIdFlow.collectLatest {
-                    val userDb = userDb()
-                    if (userDb != null) {
-                        userDb.addValueEventListenerFlow(FirebaseDbUser::class.java).collectLatest { user ->
-                            mutableCurrentFirebaseDBUser.value = user
-                            if (user == null) updateInstallTime()
-                            hasFetchedDbUser = true
-                        }
-                    } else {
-                        mutableCurrentFirebaseDBUser.value = null
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
 
     private val clientEmail: Flow<String> = appContext.dataStore.data.map { preferences ->
         preferences[CLIENT_EMAIL] ?: ""
@@ -117,23 +87,20 @@ internal class AppDataImpl(
         preferences[USER_ID] ?: ""
     }.distinctUntilChanged()
 
-    private val mutableCurrentFirebaseDBUser = MutableStateFlow<FirebaseDbUser?>(null)
-    private val currentFirebaseDBUser = mutableCurrentFirebaseDBUser.asStateFlow()
-
-    override val installDateSeconds: Flow<Long?> = currentFirebaseDBUser.map {
-        it?.installDateSeconds
+    override val installDateSeconds: Flow<Long?> = appContext.dataStore.data.map { preferences ->
+        preferences[INSTALL_DATE] ?: 0L
     }.distinctUntilChanged()
 
-    override val lastRefreshDateSeconds: Flow<Long?> = currentFirebaseDBUser.map {
-        it?.lastRefreshDateSeconds
+    override val lastRefreshDateSeconds: Flow<Long?> = appContext.dataStore.data.map { preferences ->
+        preferences[REFRESH_TIME]
     }.distinctUntilChanged()
 
-    override val autoMarkMangaCompleted: Flow<Boolean> = currentFirebaseDBUser.map {
-        it?.autoMarkMangaCompleted ?: true
+    override val autoMarkMangaCompleted: Flow<Boolean> = appContext.dataStore.data.map { preferences ->
+        preferences[AUTO_MARK_MANGA_COMPLETED] ?: true
     }.distinctUntilChanged()
 
-    override val autoMarkMangaReading: Flow<Boolean> = currentFirebaseDBUser.map {
-        it?.autoMarkMangaReading ?: true
+    override val autoMarkMangaReading: Flow<Boolean> = appContext.dataStore.data.map { preferences ->
+        preferences[AUTO_MARK_MANGA_READING] ?: true
     }.distinctUntilChanged()
 
     override var token: Flow<Pair<String, String>?> = authTokenFlow.combine(refreshTokenFlow) { auth, refresh ->
@@ -180,38 +147,27 @@ internal class AppDataImpl(
         }
     }
 
-    private suspend fun userDb(): DatabaseReference? {
-        val userId = userIdFlow.firstOrNull() ?: return null
-        if (userId.isBlank()) return null
-        return firebaseDb.getReference("users").child(userId)
-    }
-
-    private fun currentDbUser(): FirebaseDbUser {
-        return currentFirebaseDBUser.value ?: FirebaseDbUser()
-    }
-
     override suspend fun updateInstallTime() {
-        val userDb = userDb() ?: return
-        val new = currentDbUser()
-        if (new.installDateSeconds != null || !hasFetchedDbUser) return
-        userDb.setValue(new.copy(installDateSeconds = Clock.System.now().epochSeconds))
+        appContext.dataStore.edit { settings ->
+            settings[INSTALL_DATE] = Clock.System.now().epochSeconds
+        }
     }
     override suspend fun updateLastRefreshDate() {
-        val userDb = userDb() ?: return
-        val new = currentDbUser().copy(lastRefreshDateSeconds = Clock.System.now().epochSeconds)
-        userDb.setValue(new)
+        appContext.dataStore.edit { settings ->
+            settings[REFRESH_TIME] = Clock.System.now().epochSeconds
+        }
     }
 
     override suspend fun updateAutoMarkMangaCompleted(autoMarkMangaCompleted: Boolean) {
-        val userDb = userDb() ?: return
-        val new = currentDbUser().copy(autoMarkMangaCompleted = autoMarkMangaCompleted)
-        userDb.setValue(new)
+        appContext.dataStore.edit { settings ->
+            settings[AUTO_MARK_MANGA_COMPLETED] = autoMarkMangaCompleted
+        }
     }
 
     override suspend fun updateAutoMarkMangaReading(autoMarkMangaReading: Boolean) {
-        val userDb = userDb() ?: return
-        val new = currentDbUser().copy(autoMarkMangaReading = autoMarkMangaReading)
-        userDb.setValue(new)
+        appContext.dataStore.edit { settings ->
+            settings[AUTO_MARK_MANGA_READING] = autoMarkMangaReading
+        }
     }
 
     override suspend fun updateUserId(id: String) {

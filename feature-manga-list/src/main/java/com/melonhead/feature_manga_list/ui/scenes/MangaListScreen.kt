@@ -184,7 +184,7 @@ internal fun MangaListScreen(
                                 uiManga = item.second as UIManga,
                                 refreshStatus = refreshStatus,
                                 onChapterClicked = { uiManga, uiChapter ->
-                                    viewModel.onChapterClicked(context, uiManga, uiChapter)
+                                    viewModel.onChapterClicked(context, uiManga.id, uiChapter.id)
                                 },
                                 onChapterLongPressed = { uiManga, uiChapter ->
                                     chapterOptionsDialog = uiManga to uiChapter

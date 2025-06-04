@@ -5,5 +5,5 @@ import com.melonhead.lib_app_events.AppEventsRepositoryImpl
 import org.koin.dsl.module
 
 val LibAppEventsModule = module {
-    single<AppEventsRepository> { AppEventsRepositoryImpl() }
+    single<AppEventsRepository> { AppEventsRepositoryImpl(get()) }
 }

@@ -110,8 +110,6 @@ private fun ChapterOptionsDialogContent(
         )
 
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // TODO: Add ability to rate manga
-            // TODO: add ability to change reading status
 
             fun toggleRead() {
                 isRead = isRead.not()

@@ -4,17 +4,22 @@ import android.content.Context
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
+import com.melonhead.lib_app_events.events.AppEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.throttleLatest
+import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
+import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.downloadFile
+import com.melonhead.lib_read_status.ReadStatusRepository
 import io.ktor.client.HttpClient
-import io.ktor.server.application.ApplicationEvents
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -26,23 +31,35 @@ sealed class CachingStatus {
     data object FinishedCacheOperation: CachingStatus()
 }
 
-interface ChapterCache {
+interface ChapterCacheRepository {
     val cachingStatus: Flow<CachingStatus>
     fun getChapterFromCache(mangaId: String, chapterId: String): List<String>
     fun getChapterPageCountFromCache(mangaId: String, chapterId: String): Int?
-    suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>)
     fun clearChapterFromCache(mangaId: String, chapterId: String)
     fun clearCacheForManga(mangaId: String)
 }
 
-internal class ChapterCacheImpl(
+internal class ChapterCacheRepositoryImpl(
     private val appData: AppData,
     private val atHomeService: AtHomeService,
     private val appContext: Context,
     private val httpClient: HttpClient,
     private val externalScope: CoroutineScope,
-    private val appEventsRepository: AppEventsRepository
-) : ChapterCache {
+    private val appEventsRepository: AppEventsRepository,
+
+    private val chapterDb: ChapterDao,
+    private val mangaDb: MangaDao,
+    private val readStatusRepository: ReadStatusRepository,
+) : ChapterCacheRepository {
+    private val cacheChaptersThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
+        externalScope.launch { cacheImagesForNewChapters(pair.first, pair.second) }
+    }
+
+    private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
+    override val cachingStatus: Flow<CachingStatus>
+        get() = mutableCachingStatus
+
+    private val cacheWriteLock = Mutex()
 
     init {
         Clog.i("ChapterCache init")
@@ -71,6 +88,12 @@ internal class ChapterCacheImpl(
                                 }
                             }
 
+                            is UserEvent.RefreshManga -> {
+                                launch {
+                                    cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                }
+                            }
+
                             else -> {
                             }
                         }
@@ -80,13 +103,15 @@ internal class ChapterCacheImpl(
                 e.printStackTrace()
             }
         }
+
+        externalScope.launch {
+            combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers) { manga, chapters, _ ->
+                manga to chapters
+            }.collectLatest { event ->
+                launch { cacheChaptersThrottled(event) }
+            }
+        }
     }
-
-    private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
-    override val cachingStatus: Flow<CachingStatus>
-        get() = mutableCachingStatus
-
-    private val cacheWriteLock = Mutex()
 
     /* Wraps cache operation with status updates */
     private suspend fun cacheOperation(operation: suspend () -> Unit) {
@@ -127,7 +152,15 @@ internal class ChapterCacheImpl(
         return successFiles.first().nameWithoutExtension.toInt()
     }
 
-    override suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+    private suspend fun cacheImagesForNewChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+        val newChapters = chapters
+            .filter { !readStatusRepository.isRead(it) }
+            .filter { !it.blockedChapter }
+            .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
+        cacheImagesForChapters(manga, newChapters)
+    }
+
+    private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         cacheOperation {
             val cacheDirectory = appContext.cacheDir
             for (chapter in chapters) {

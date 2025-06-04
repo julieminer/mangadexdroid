@@ -2,7 +2,6 @@ package com.melonhead.feature_manga_list.viewmodels
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -18,10 +17,9 @@ import com.melonhead.feature_manga_list.MangaRepository
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
-import com.melonhead.lib_chapter_cache.ChapterCache
+import com.melonhead.lib_chapter_cache.ChapterCacheRepository
 import com.melonhead.lib_navigation.Navigator
 import com.melonhead.lib_navigation.keys.ActivityKey
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -33,7 +31,7 @@ import com.melonhead.lib_logging.Clog
 
 internal class MangaListViewModel(
     private val mangaRepository: MangaRepository,
-    private val chapterCache: ChapterCache,
+    private val chapterCacheRepository: ChapterCacheRepository,
     private val userAppData: AppData,
     private val navigator: Navigator,
     private val appEventsRepository: AppEventsRepository,
@@ -52,7 +50,7 @@ internal class MangaListViewModel(
         viewModelScope.launch {
             appEventsRepository.events.collectLatest { event ->
                 if (event is UserEvent.OpenedNotification) {
-                    onChapterClicked(event.context, event.manga, event.chapter)
+                    onChapterClicked(event.context, event.mangaId, event.chapterId)
                 }
 
                 if (event is SystemLogicEvents.PromptMangaRating) {
@@ -97,14 +95,16 @@ internal class MangaListViewModel(
             "Never"
     }
 
-    fun onChapterClicked(context: Context, uiManga: UIManga, uiChapter: UIChapter) {
+    fun onChapterClicked(context: Context, mangaId: String, chapterId: String) {
         viewModelScope.launch {
+            val (uiManga, uiChapter) = mangaRepository.getChapterById(mangaId, chapterId) ?: return@launch
+
             val intent = when (userAppData.renderStyle) {
                 RenderStyle.Native -> {
-                    val chapterData = mangaRepository.getChapterData(uiManga.id, uiChapter.id)
+                    val chapterData = mangaRepository.getChapterData(mangaId, chapterId)
                     // use secondary render style
                     if (chapterData.isNullOrEmpty()) {
-                        appEventsRepository.postEvent(UserEvent.SetUseWebView(uiManga.id, true))
+                        appEventsRepository.postEvent(UserEvent.SetUseWebView(mangaId, true))
                         navigateToWebView(context, uiManga, uiChapter)
                     } else {
                         navigator.intentForKey(context, ActivityKey.ChapterActivity(
@@ -137,7 +137,7 @@ internal class MangaListViewModel(
     }
 
     fun clearChapterCache(uiManga: UIManga, uiChapter: UIChapter) {
-        chapterCache.clearChapterFromCache(uiManga.id, uiChapter.id)
+        chapterCacheRepository.clearChapterFromCache(uiManga.id, uiChapter.id)
     }
 
     fun refreshContent() = viewModelScope.launch {
@@ -155,7 +155,7 @@ internal class MangaListViewModel(
     }
 
     fun clearCache(uiManga: UIManga) {
-        chapterCache.clearCacheForManga(uiManga.id)
+        chapterCacheRepository.clearCacheForManga(uiManga.id)
     }
 
     fun rateManga(manga: UIManga, rating: Int) {
