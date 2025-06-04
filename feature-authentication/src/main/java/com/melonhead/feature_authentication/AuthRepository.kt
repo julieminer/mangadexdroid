@@ -30,8 +30,12 @@ internal class AuthRepositoryImpl(
 ) : AuthRepository {
     init {
         externalScope.launch {
-            appEventsRepository.postEvent(if (appData.token.firstOrNull() != null) AuthenticationEvent.LoggedIn else AuthenticationEvent.LoggedOut)
-            refreshOAuthToken(logoutOnFail = false)
+            if (appData.token.firstOrNull() != null) {
+                appEventsRepository.postEvent(AuthenticationEvent.LoggingIn)
+                refreshOAuthToken(logoutOnFail = false)
+            } else {
+                appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
+            }
         }
 
         externalScope.launch(context = Dispatchers.IO) {
@@ -53,9 +57,11 @@ internal class AuthRepositoryImpl(
 
     private suspend fun refreshOAuthToken(logoutOnFail: Boolean, email: String, apiClient: String, apiSecret: String): OAuthToken? {
         suspend fun signOut() {
-            Clog.e("Signing out, refresh failed", Exception())
+            if (logoutOnFail) {
+                Clog.e("Signing out, refresh failed", Exception())
+                appData.updateUserId("")
+            }
             appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
-            appData.updateUserId("")
         }
 
         val currentToken = appData.token.firstOrNull()
@@ -77,17 +83,6 @@ internal class AuthRepositoryImpl(
         if (newToken == null) {
             Clog.w("signOut: new token null")
             signOut()
-        } else if (appData.userIdFlow.firstOrNull() != null) {
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-        } else {
-            val userResponse = userService.getInfo()
-            val userId = userResponse?.data?.id
-            if (userId == null) {
-                Clog.i("userResponse = ${userResponse?.toString()}")
-                Clog.e("User info returned null", RuntimeException("User info returned null"))
-            }
-            appData.updateUserId(userId ?: "")
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
         }
         return newToken
     }
@@ -129,9 +124,11 @@ internal class AuthRepositoryImpl(
         appEventsRepository.postEvent(AuthenticationEvent.LoggingIn)
         val token = loginService.authenticate(email, password)
         appData.updateToken(session = token?.session, refresh = token?.refresh)
-        appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-        Clog.i("Refresh: authenticate")
-        appEventsRepository.postEvent(UserEvent.RefreshManga())
+        if (token != null) {
+            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
+            Clog.i("Refresh: authenticate")
+            appEventsRepository.postEvent(UserEvent.RefreshManga())
+        }
     }
 
     override suspend fun authenticate(
@@ -145,8 +142,10 @@ internal class AuthRepositoryImpl(
         appData.updateClient(email, clientId, clientSecret)
         val token = loginService.authenticateOauth(email, password, clientId, clientSecret)
         appData.updateToken(session = token?.accessToken, refresh = token?.refreshToken)
-        appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-        Clog.i("Refresh: authenticate")
-        appEventsRepository.postEvent(UserEvent.RefreshManga())
+        if (token != null) {
+            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
+            Clog.i("Refresh: authenticate")
+            appEventsRepository.postEvent(UserEvent.RefreshManga())
+        }
     }
 }
