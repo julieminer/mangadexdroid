@@ -73,20 +73,31 @@ internal class AppDataImpl(
             delay(100L)
             try {
                 userIdFlow.collectLatest {
-                    val userDb = userDb()
-                    if (userDb != null) {
-                        userDb.addValueEventListenerFlow(FirebaseDbUser::class.java).collectLatest { user ->
-                            mutableCurrentFirebaseDBUser.value = user
-                            if (user == null) updateInstallTime()
-                            hasFetchedDbUser = true
-                        }
-                    } else {
-                        mutableCurrentFirebaseDBUser.value = null
-                    }
+                    fetchUserWithId()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        externalScope.launch(IO) {
+            delay(500L)
+            if (userIdFlow.firstOrNull() != null) {
+                fetchUserWithId()
+            }
+        }
+    }
+
+    private suspend fun fetchUserWithId() {
+        val userDb = userDb()
+        if (userDb != null) {
+            userDb.addValueEventListenerFlow(FirebaseDbUser::class.java).collectLatest { user ->
+                mutableCurrentFirebaseDBUser.value = user
+                if (user == null) updateInstallTime()
+                hasFetchedDbUser = true
+            }
+        } else {
+            mutableCurrentFirebaseDBUser.value = null
         }
     }
 
