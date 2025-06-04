@@ -14,10 +14,15 @@ import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_notifications.NewChapterNotificationChannel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
 import kotlinx.serialization.json.Json
 
 class MainViewModel(
@@ -25,14 +30,32 @@ class MainViewModel(
     private val appEventsRepository: AppEventsRepository,
     private val appData: AppData,
 ): ViewModel() {
-    val loginStatus = appEventsRepository.events.mapNotNull {
-        when (it) {
-            is AuthenticationEvent.LoggedIn -> LoginStatus.LoggedIn
-            is AuthenticationEvent.LoggedOut -> LoginStatus.LoggedOut
-            is AuthenticationEvent.LoggingIn -> LoginStatus.LoggingIn
-            else -> null
+    private val mutableLoginStatus = MutableStateFlow<LoginStatus?>(null)
+    val loginStatus = mutableLoginStatus.asLiveData(viewModelScope.coroutineContext)
+
+    init {
+        viewModelScope.launch {
+            combine(appEventsRepository.events, appData.token) { event, token ->
+                when (event) {
+                    is AuthenticationEvent.LoggedIn, is AuthenticationEvent.LoggedOut -> {
+                        if (token == null) {
+                            Clog.w("Setting status to logged out: event = ${event}, token is null")
+                            mutableLoginStatus.value = LoginStatus.LoggedOut
+                        } else {
+                            mutableLoginStatus.value = LoginStatus.LoggedIn
+                        }
+                    }
+                    is AuthenticationEvent.LoggingIn -> {
+                        mutableLoginStatus.value = LoginStatus.LoggingIn
+                    }
+                }
+            }
         }
-    }.asLiveData(viewModelScope.coroutineContext)
+
+        viewModelScope.launch {
+            mutableLoginStatus.value = if (appData.token.firstOrNull() != null) LoginStatus.LoggedIn else LoginStatus.LoggedOut
+        }
+    }
 
     val clientDetails = flow<Triple<String, String, String>> {
         appData.getClient()
