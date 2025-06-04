@@ -9,7 +9,6 @@ import com.melonhead.lib_app_events.events.AppEvent
 import com.melonhead.lib_app_events.events.AppLifecycleEvent
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
-import com.melonhead.lib_chapter_cache.ChapterCacheRepository
 import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
@@ -45,17 +44,15 @@ internal class ReadSyncRepositoryImpl(
 
     private val readStatusRepository: ReadStatusRepository,
     private val appEventsRepository: AppEventsRepository,
-
-    private val chapterCacheRepository: ChapterCacheRepository,
 ): ReadSyncRepository {
     private val pullMangaThrottled: (AppEvent) -> Unit = throttleLatest(300L, externalScope) { event ->
         externalScope.launch { pullManga((event as? UserEvent.RefreshManga)?.completionJob) }
     }
 
-    private var isLoggedIn: Boolean = false
-
     private val mutableRefreshStatus = MutableStateFlow<MangaRefreshStatus>(MangaRefreshStatus.None)
     override val refreshStatus = mutableRefreshStatus.shareIn(externalScope, replay = 0, started = SharingStarted.WhileSubscribed())
+
+    private var hasLaunched = false
 
     init {
         Clog.i("ReadSyncRepository init")
@@ -67,18 +64,16 @@ internal class ReadSyncRepositoryImpl(
                     launch {
                         when (event) {
                             is AuthenticationEvent.LoggedIn -> {
-                                if (!isLoggedIn) {
-                                    isLoggedIn = true
-                                    Clog.i("Refresh: Logged in")
-                                    pullMangaThrottled(event)
-                                }
-                            }
-                            is AuthenticationEvent.LoggedOut -> {
-                                isLoggedIn = false
+                                Clog.i("Refresh: Logged in")
+                                pullMangaThrottled(event)
                             }
                             is AppLifecycleEvent.AppForegrounded -> {
-                                Clog.i("Refresh: Foregrounded")
-                                pullMangaThrottled(event)
+                                if (hasLaunched) {
+                                    Clog.i("Refresh: Foregrounded")
+                                    pullMangaThrottled(event)
+                                } else {
+                                    hasLaunched = true
+                                }
                             }
                             is UserEvent.RefreshManga -> {
                                 Clog.i("Refresh: Refresh event")
@@ -91,8 +86,6 @@ internal class ReadSyncRepositoryImpl(
                 e.printStackTrace()
             }
         }
-
-        pullMangaThrottled(AppLifecycleEvent.AppForegrounded)
     }
 
     override suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?) {
@@ -103,7 +96,7 @@ internal class ReadSyncRepositoryImpl(
 
         val token = appData.getToken()
         if (token == null) {
-            Clog.i("Failed to refresh token")
+            Clog.i("Failed to refresh token or has not logged in previously")
             return
         }
 

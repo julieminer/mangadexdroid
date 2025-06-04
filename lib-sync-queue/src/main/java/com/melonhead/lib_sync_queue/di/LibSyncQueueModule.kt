@@ -29,6 +29,6 @@ val LibWriteSyncRepositoryModule = module {
         WriteSyncRepositoryImpl(get(), get(), get(), get(), get(), get())
     }
     single<ReadSyncRepository>(createdAtStart = true) {
-        ReadSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
+        ReadSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get())
     }
 }
