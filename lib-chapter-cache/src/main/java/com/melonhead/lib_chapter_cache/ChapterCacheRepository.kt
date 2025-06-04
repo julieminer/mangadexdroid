@@ -4,7 +4,9 @@ import android.content.Context
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
+import com.melonhead.lib_app_events.events.AppEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
 import com.melonhead.lib_database.manga.MangaDao
@@ -33,7 +35,6 @@ interface ChapterCacheRepository {
     val cachingStatus: Flow<CachingStatus>
     fun getChapterFromCache(mangaId: String, chapterId: String): List<String>
     fun getChapterPageCountFromCache(mangaId: String, chapterId: String): Int?
-    suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>)
     fun clearChapterFromCache(mangaId: String, chapterId: String)
     fun clearCacheForManga(mangaId: String)
 }
@@ -50,6 +51,15 @@ internal class ChapterCacheRepositoryImpl(
     private val mangaDb: MangaDao,
     private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
+    private val cacheChaptersThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
+        externalScope.launch { cacheImagesForNewChapters(pair.first, pair.second) }
+    }
+
+    private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
+    override val cachingStatus: Flow<CachingStatus>
+        get() = mutableCachingStatus
+
+    private val cacheWriteLock = Mutex()
 
     init {
         Clog.i("ChapterCache init")
@@ -80,7 +90,7 @@ internal class ChapterCacheRepositoryImpl(
 
                             is UserEvent.RefreshManga -> {
                                 launch {
-                                    cacheImagesForNewChapters(mangaDb.getAllSync(), chapterDb.getAllSync())
+                                    cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
                                 }
                             }
 
@@ -95,21 +105,13 @@ internal class ChapterCacheRepositoryImpl(
         }
 
         externalScope.launch {
-            combine(mangaDb.allSeries(), chapterDb.allChapters(), { manga, chapters ->
-                launch { cacheImagesForNewChapters(manga, chapters) }
-            })
-        }
-
-        externalScope.launch {
-            cacheImagesForNewChapters(mangaDb.getAllSync(), chapterDb.getAllSync())
+            combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers) { manga, chapters, _ ->
+                manga to chapters
+            }.collectLatest { event ->
+                launch { cacheChaptersThrottled(event) }
+            }
         }
     }
-
-    private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
-    override val cachingStatus: Flow<CachingStatus>
-        get() = mutableCachingStatus
-
-    private val cacheWriteLock = Mutex()
 
     /* Wraps cache operation with status updates */
     private suspend fun cacheOperation(operation: suspend () -> Unit) {
@@ -158,8 +160,7 @@ internal class ChapterCacheRepositoryImpl(
         cacheImagesForChapters(manga, newChapters)
     }
 
-    // TODO: make this private
-    override suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+    private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         cacheOperation {
             val cacheDirectory = appContext.cacheDir
             for (chapter in chapters) {
