@@ -9,6 +9,6 @@ import org.koin.dsl.module
 val LibAppDataModule = module {
     factory { CoroutineScope(Dispatchers.IO) }
     single<AppData>(createdAtStart = true) {
-        AppDataImpl(get(), get())
+        AppDataImpl(get())
     }
 }
