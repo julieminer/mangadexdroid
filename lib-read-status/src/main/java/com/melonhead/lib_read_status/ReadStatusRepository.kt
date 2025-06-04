@@ -63,7 +63,6 @@ internal class ReadStatusRepositoryImpl(
         }
     }
 
-    // TODO: some of this logic should be separate from readstatus
     override suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         Clog.i("ReadStatus.refresh: start")
 
@@ -148,7 +147,6 @@ internal class ReadStatusRepositoryImpl(
         readMarkerDb.update(entity.copy(readStatus = read))
         if (isDuplicate) return
 
-        // TODO: consider using logic event or creating a lib
         val readingStatus = mangaService.getSeriesReadingStatus(chapter.mangaId) ?: return
         when (readingStatus) {
             ReadingStatus.ReReading,

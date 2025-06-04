@@ -56,6 +56,10 @@ internal class NotificationsRepositoryImpl(
                                 }
                             }
 
+                            is UserEvent.RefreshManga -> {
+                                postNewChapterNotifications(mangaDb.getAllSync(), chapterDb.getAllSync())
+                            }
+
                             else -> {
                             }
                         }

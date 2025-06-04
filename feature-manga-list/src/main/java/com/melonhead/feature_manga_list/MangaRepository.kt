@@ -22,6 +22,7 @@ internal interface MangaRepository {
     val refreshStatus: Flow<MangaRefreshStatus>
     fun rateManga(mangaId: String, rating: Int)
     suspend fun getChapterData(mangaId: String, chapterId: String): List<String>?
+    suspend fun getChapterById(mangaId: String, chapterId: String): Pair<UIManga, UIChapter>?
 }
 
 internal class MangaRepositoryImpl(
@@ -114,7 +115,6 @@ internal class MangaRepositoryImpl(
         return hasUnread + allRead
     }
 
-    // currently trying to deprecate this function, and use chapterCache directly
     override suspend fun getChapterData(mangaId: String, chapterId: String): List<String>? {
         val chapterFiles = chapterCacheRepository.getChapterFromCache(mangaId, chapterId)
         if (chapterFiles.isNotEmpty()) return chapterFiles
@@ -131,6 +131,12 @@ internal class MangaRepositoryImpl(
 
     override fun rateManga(mangaId: String, rating: Int) {
         appEventsRepository.postEvent(UserEvent.SetMangaRating(mangaId, rating))
+    }
+
+    override suspend fun getChapterById(mangaId: String, chapterId: String): Pair<UIManga, UIChapter>? {
+        val manga = manga.firstOrNull()?.firstOrNull { it.id == mangaId } ?: return null
+        val chapter = manga?.chapters?.firstOrNull { it.id == chapterId } ?: return null
+        return manga to chapter
     }
 
     private fun markChapterBlocked(chapterId: String, blocked: Boolean) {

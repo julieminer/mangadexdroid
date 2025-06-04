@@ -50,8 +50,7 @@ internal class MangaListViewModel(
         viewModelScope.launch {
             appEventsRepository.events.collectLatest { event ->
                 if (event is UserEvent.OpenedNotification) {
-                    // TODO: fix this
-//                    onChapterClicked(event.context, event.manga, event.chapter)
+                    onChapterClicked(event.context, event.mangaId, event.chapterId)
                 }
 
                 if (event is SystemLogicEvents.PromptMangaRating) {
@@ -96,15 +95,16 @@ internal class MangaListViewModel(
             "Never"
     }
 
-    fun onChapterClicked(context: Context, uiManga: UIManga, uiChapter: UIChapter) {
+    fun onChapterClicked(context: Context, mangaId: String, chapterId: String) {
         viewModelScope.launch {
+            val (uiManga, uiChapter) = mangaRepository.getChapterById(mangaId, chapterId) ?: return@launch
+
             val intent = when (userAppData.renderStyle) {
                 RenderStyle.Native -> {
-                    // TODO: use chapter cache directly
-                    val chapterData = mangaRepository.getChapterData(uiManga.id, uiChapter.id)
+                    val chapterData = mangaRepository.getChapterData(mangaId, chapterId)
                     // use secondary render style
                     if (chapterData.isNullOrEmpty()) {
-                        appEventsRepository.postEvent(UserEvent.SetUseWebView(uiManga.id, true))
+                        appEventsRepository.postEvent(UserEvent.SetUseWebView(mangaId, true))
                         navigateToWebView(context, uiManga, uiChapter)
                     } else {
                         navigator.intentForKey(context, ActivityKey.ChapterActivity(
