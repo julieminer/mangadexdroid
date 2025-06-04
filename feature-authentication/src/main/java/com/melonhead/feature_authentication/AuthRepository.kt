@@ -60,11 +60,13 @@ internal class AuthRepositoryImpl(
 
         val currentToken = appData.token.firstOrNull()
         if (currentToken == null) {
+            Clog.w("signOut: Current token null")
             signOut()
             return null
         }
 
         if (email.isEmpty() || apiClient.isEmpty() || apiSecret.isEmpty()) {
+            Clog.w("signOut: missing client info")
             signOut()
             return null
         }
@@ -73,6 +75,7 @@ internal class AuthRepositoryImpl(
         appData.updateClient(email, apiClient, apiSecret)
         appData.updateToken(session = newToken?.accessToken, refresh = newToken?.refreshToken)
         if (newToken == null) {
+            Clog.w("signOut: new token null")
             signOut()
         } else if (appData.userIdFlow.firstOrNull() != null) {
             appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
