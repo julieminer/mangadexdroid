@@ -1,13 +1,13 @@
 package com.melonhead.feature_authentication
 
 import android.content.Context
-import com.melonhead.data_authentication.models.AuthToken
 import com.melonhead.data_authentication.models.OAuthToken
 import com.melonhead.data_authentication.services.LoginService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +74,11 @@ internal class AuthRepositoryImpl(
             return null
         }
 
+        // if offline, assume current token is valid
+        if (!context.isNetworkAvailable()) {
+            return OAuthToken(currentToken.first, currentToken.second)
+        }
+
         val newToken = loginService.refreshOAuthToken(logoutOnFail, email, apiClient, apiSecret)
         appData.updateClient(email, apiClient, apiSecret)
         appData.updateToken(session = newToken?.accessToken, refresh = newToken?.refreshToken)
@@ -84,6 +89,7 @@ internal class AuthRepositoryImpl(
         return newToken
     }
 
+    // should only be called while online
     override suspend fun authenticate(
         email: String,
         password: String,

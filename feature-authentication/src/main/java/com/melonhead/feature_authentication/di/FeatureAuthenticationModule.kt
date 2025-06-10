@@ -22,12 +22,14 @@ val FeatureAuthenticationModule = module {
     includes(DataAuthenticationModule)
     includes(DataUserModule)
 
-    single<AuthRepository>(createdAtStart = true) { AuthRepositoryImpl(
-        get(),
-        get(),
-        get(),
-        get(),
-        get(),
-    ) }
+    single<AuthRepository>(createdAtStart = true) {
+        AuthRepositoryImpl(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
     single<OauthLoginScreenResolver>(createdAtStart = true) { OauthLoginScreenResolver() }
 }
