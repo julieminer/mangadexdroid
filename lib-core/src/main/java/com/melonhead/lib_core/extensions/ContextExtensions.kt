@@ -1,4 +1,4 @@
-package com.melonhead.lib_networking.extensions
+package com.melonhead.lib_core.extensions
 
 import android.content.Context
 import android.net.ConnectivityManager
