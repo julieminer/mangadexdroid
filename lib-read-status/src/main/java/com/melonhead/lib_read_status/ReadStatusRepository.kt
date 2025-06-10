@@ -1,14 +1,11 @@
 package com.melonhead.lib_read_status
 
-import com.melonhead.data_manga.models.ReadingStatus
 import com.melonhead.data_manga.services.MangaService
-import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
-import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_database.readmarkers.ReadMarkerDao
 import com.melonhead.lib_database.readmarkers.ReadMarkerEntity
@@ -16,7 +13,6 @@ import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 interface ReadStatusRepository {
@@ -28,8 +24,6 @@ interface ReadStatusRepository {
 internal class ReadStatusRepositoryImpl(
     private val externalScope: CoroutineScope,
     private val readMarkerDb: ReadMarkerDao,
-    private val appData: AppData,
-    private val mangaDb: MangaDao,
     private val chapterDb: ChapterDao,
     private val mangaService: MangaService,
     private val appEventsRepository: AppEventsRepository,
@@ -63,6 +57,7 @@ internal class ReadStatusRepositoryImpl(
         }
     }
 
+    // should only be called when online
     override suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         Clog.i("ReadStatus.refresh: start")
 
@@ -116,28 +111,6 @@ internal class ReadStatusRepositoryImpl(
         }
     }
 
-    private suspend fun internalMarkSeriesReading(chapter: ChapterEntity, read: Boolean) {
-        if (!read) return
-        if (appData.autoMarkMangaReading.firstOrNull() != true) return
-        appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Reading.serialized()))
-    }
-
-    private suspend fun internalMarkSeriesComplete(chapter: ChapterEntity, read: Boolean) {
-        if (!read) return
-        if (appData.autoMarkMangaCompleted.firstOrNull() != true) return
-
-        val manga = mangaDb.getMangaById(chapter.mangaId)
-        if (manga == null) {
-            Clog.e("ReadStatus.internalMarkSeriesComplete: manga not found", NullPointerException("ReadStatus.internalMarkSeriesComplete: manga not found"))
-            return
-        }
-
-        if (manga.lastChapter != chapter.chapter) return
-
-        appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Completed.serialized()))
-        appEventsRepository.postEvent(SystemLogicEvents.PromptMangaRating(chapter.mangaId))
-    }
-
     private suspend fun internalMarkChapterAsRead(chapter: ChapterEntity, isDuplicate: Boolean, read: Boolean) {
         val entity = readMarkerDb.getEntityByChapter(
             mangaId = chapter.mangaId,
@@ -147,25 +120,7 @@ internal class ReadStatusRepositoryImpl(
         readMarkerDb.update(entity.copy(readStatus = read))
         if (isDuplicate) return
 
-        val readingStatus = mangaService.getSeriesReadingStatus(chapter.mangaId) ?: return
-        when (readingStatus) {
-            ReadingStatus.ReReading,
-            ReadingStatus.Reading,
-                -> {
-                internalMarkSeriesComplete(chapter, read)
-            }
-
-            ReadingStatus.OnHold -> {
-                internalMarkSeriesReading(chapter, read)
-                internalMarkSeriesComplete(chapter, read)
-            }
-
-            ReadingStatus.Completed,
-            ReadingStatus.PlanToRead,
-            ReadingStatus.Dropped -> {
-                // no-op
-            }
-        }
+        appEventsRepository.postEvent(SystemLogicEvents.UpdateMangaReadingStatus(chapter.mangaId, chapter.id, read))
     }
 
 }

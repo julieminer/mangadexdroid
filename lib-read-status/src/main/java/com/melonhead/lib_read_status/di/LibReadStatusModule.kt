@@ -12,6 +12,6 @@ val LibReadStatusRepositoryModule = module {
     includes(LibAppDataModule)
     includes(DataMangaModule)
     single<ReadStatusRepository>(createdAtStart = true) {
-        ReadStatusRepositoryImpl(get(), get(), get(), get(), get(), get(), get())
+        ReadStatusRepositoryImpl(get(), get(), get(), get(), get())
     }
 }
