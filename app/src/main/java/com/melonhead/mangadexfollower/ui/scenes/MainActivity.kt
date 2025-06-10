@@ -12,17 +12,22 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.lib_core.theme.MangadexFollowerTheme
 import com.melonhead.feature_authentication.models.LoginStatus
 import com.melonhead.lib_app_data.AppData
+import com.melonhead.lib_core.scenes.OfflineScreen
 import com.melonhead.lib_navigation.Navigator
 import com.melonhead.lib_navigation.keys.ScreenKey
+import com.melonhead.lib_networking.extensions.networkAvailability
 import com.melonhead.mangadexfollower.BuildConfig
 import com.melonhead.mangadexfollower.ui.viewmodels.MainViewModel
 import org.koin.android.ext.android.inject
@@ -58,6 +63,7 @@ class MainActivity : ComponentActivity() {
                     Surface(Modifier.fillMaxSize().statusBarsPadding()) {
                         val loginStatus by viewModel.loginStatus.observeAsState()
                         val clientDetails by viewModel.clientDetails.observeAsState()
+                        val connected by LocalContext.current.networkAvailability().collectAsState(true)
 
                         when (loginStatus) {
                             LoginStatus.LoggedIn -> {
@@ -70,16 +76,26 @@ class MainActivity : ComponentActivity() {
                             }
 
                             LoginStatus.LoggedOut, null -> {
-                                val (email, clientId, clientSecret) = clientDetails ?: Triple("", "", "")
-                                navigator.ComposeWithKey(screenKey = ScreenKey.OauthLoginScreen(onLoginTapped = { username, password, clientId, clientSecret ->
-                                    viewModel.authenticate(
-                                        username,
-                                        password,
-                                        clientId,
-                                        clientSecret
+                                if (connected) {
+                                    val (email, clientId, clientSecret) = clientDetails ?: Triple("", "", "")
+                                    navigator.ComposeWithKey(
+                                        screenKey = ScreenKey.OauthLoginScreen(
+                                            onLoginTapped = { username, password, clientId, clientSecret ->
+                                                viewModel.authenticate(
+                                                    username,
+                                                    password,
+                                                    clientId,
+                                                    clientSecret
+                                                )
+                                            },
+                                            email,
+                                            clientId,
+                                            clientSecret
+                                        )
                                     )
-                                },
-                                    email, clientId, clientSecret))
+                                } else {
+                                    OfflineScreen()
+                                }
                             }
 
                             LoginStatus.LoggingIn -> LoadingScreen(null)
