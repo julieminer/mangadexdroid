@@ -1,13 +1,16 @@
 package com.melonhead.lib_sync_queue
 
+import android.content.Context
 import com.melonhead.data_manga.models.ReadingStatus
 import com.melonhead.data_manga.services.MangaService
 import com.melonhead.data_rating.services.RatingService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
+import com.melonhead.lib_app_events.events.AppLifecycleEvent
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.sync_queue.SyncQueueDao
 import com.melonhead.lib_database.sync_queue.SyncQueueEntity
@@ -22,6 +25,7 @@ import java.util.concurrent.CompletableFuture
 interface WriteSyncRepository
 
 internal class WriteSyncRepositoryImpl(
+    private val context: Context,
     private val externalScope: CoroutineScope,
     private val appEventsRepository: AppEventsRepository,
     private val syncQueueDb: SyncQueueDao,
@@ -29,7 +33,7 @@ internal class WriteSyncRepositoryImpl(
     private val mangaService: MangaService,
     private val appData: AppData,
 ) : WriteSyncRepository {
-    private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, externalScope) { event ->
+    private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, externalScope) { _ ->
         processQueue()
     }
 
@@ -61,6 +65,12 @@ internal class WriteSyncRepositoryImpl(
                                 processQueueThrottled(Unit)
                             }
 
+                            is AppLifecycleEvent.ConnectionChanged -> {
+                                if (event.connected) {
+                                    processQueueThrottled(Unit)
+                                }
+                            }
+
                             else -> {
                             }
                         }
@@ -88,6 +98,8 @@ internal class WriteSyncRepositoryImpl(
     }
 
     private fun processQueue() {
+        if (!context.isNetworkAvailable()) return
+
         externalScope.launch {
             val refreshCompletionJob = CompletableFuture<Unit>()
             appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))
@@ -125,14 +137,17 @@ internal class WriteSyncRepositoryImpl(
     }
 
     private suspend fun changeRating(mangaId: String, rating: Int): Boolean {
+        if (!context.isNetworkAvailable()) return false
         return ratingService.setRating(mangaId, rating)
     }
 
     private suspend fun changeReadingStatus(mangaId: String, readingStatus: String): Boolean {
+        if (!context.isNetworkAvailable()) return false
         return mangaService.changeSeriesReadingStatus(mangaId, ReadingStatus.from(readingStatus)!!)
     }
 
     private suspend fun markRead(mangaId: String, chapterId: String, read: Boolean): Boolean {
+        if (!context.isNetworkAvailable()) return false
         return mangaService.changeReadStatus(
             mangaId = mangaId,
             chapterId = chapterId,
