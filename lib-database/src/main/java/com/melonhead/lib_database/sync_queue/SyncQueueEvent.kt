@@ -10,4 +10,6 @@ sealed class SyncQueueEvent {
     data class ChangeRating(val mangaId: String, val rating: Int) : SyncQueueEvent()
     @Serializable
     data class ChangeSeriesReadingStatus(val mangaId: String, val readingStatus: String) : SyncQueueEvent()
+    @Serializable
+    data class UpdateMangaReadingStatus(val mangaId: String, val chapterId: String, val readPostedChapter: Boolean) : SyncQueueEvent()
 }
