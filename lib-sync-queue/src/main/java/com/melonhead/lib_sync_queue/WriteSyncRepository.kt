@@ -12,12 +12,16 @@ import com.melonhead.lib_app_events.events.SystemLogicEvents
 import com.melonhead.lib_app_events.events.UserEvent
 import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_core.extensions.throttleLatest
+import com.melonhead.lib_database.chapter.ChapterDao
+import com.melonhead.lib_database.chapter.ChapterEntity
+import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.sync_queue.SyncQueueDao
 import com.melonhead.lib_database.sync_queue.SyncQueueEntity
 import com.melonhead.lib_database.sync_queue.SyncQueueEvent
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import java.util.concurrent.CompletableFuture
@@ -32,6 +36,8 @@ internal class WriteSyncRepositoryImpl(
     private val ratingService: RatingService,
     private val mangaService: MangaService,
     private val appData: AppData,
+    private val mangaDb: MangaDao,
+    private val chapterDb: ChapterDao,
 ) : WriteSyncRepository {
     private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, externalScope) { _ ->
         processQueue()
@@ -59,6 +65,10 @@ internal class WriteSyncRepositoryImpl(
 
                             is SystemLogicEvents.ChangeMangaReadingStatus -> {
                                 setMangaReadingStatus(event.mangaId, event.readingStatus)
+                            }
+
+                            is SystemLogicEvents.UpdateMangaReadingStatus -> {
+                                setUpdateMangaReadingStatus(event.mangaId, event.chapterId, event.readPostedChapter)
                             }
 
                             is UserEvent.RefreshManga -> {
@@ -97,6 +107,11 @@ internal class WriteSyncRepositoryImpl(
         processQueueThrottled(Unit)
     }
 
+    private fun setUpdateMangaReadingStatus(mangaId: String, chapterId: String, readPostedChapter: Boolean) = externalScope.launch {
+        syncQueueDb.insert(SyncQueueEntity(event = SyncQueueEvent.UpdateMangaReadingStatus(mangaId = mangaId, chapterId = chapterId, readPostedChapter = readPostedChapter)))
+        processQueueThrottled(Unit)
+    }
+
     private fun processQueue() {
         if (!context.isNetworkAvailable()) return
 
@@ -126,6 +141,10 @@ internal class WriteSyncRepositoryImpl(
                         val event = item.event as SyncQueueEvent.MarkRead
                         markRead(event.mangaId, event.chapterId, event.read)
                     }
+                    is SyncQueueEvent.UpdateMangaReadingStatus -> {
+                        val event = item.event as SyncQueueEvent.UpdateMangaReadingStatus
+                        updateReadingStatus(event.mangaId, event.chapterId, event.readPostedChapter)
+                    }
                 }
                 if (success) {
                     syncQueueDb.delete(item)
@@ -134,6 +153,35 @@ internal class WriteSyncRepositoryImpl(
                 }
             }
         }
+    }
+
+    private suspend fun updateReadingStatus(
+        mangaId: String,
+        chapterId: String,
+        readPostedChapter: Boolean
+    ): Boolean {
+        if (!context.isNetworkAvailable()) { return false }
+        val chapter = chapterDb.getChapterForId(chapterId)
+        val readingStatus = mangaService.getSeriesReadingStatus(mangaId) ?: return false
+        when (readingStatus) {
+            ReadingStatus.ReReading,
+            ReadingStatus.Reading,
+                -> {
+                internalMarkSeriesComplete(chapter, readPostedChapter)
+            }
+
+            ReadingStatus.OnHold -> {
+                internalMarkSeriesReading(chapter, readPostedChapter)
+                internalMarkSeriesComplete(chapter, readPostedChapter)
+            }
+
+            ReadingStatus.Completed,
+            ReadingStatus.PlanToRead,
+            ReadingStatus.Dropped -> {
+                // no-op
+            }
+        }
+        return true
     }
 
     private suspend fun changeRating(mangaId: String, rating: Int): Boolean {
@@ -153,5 +201,27 @@ internal class WriteSyncRepositoryImpl(
             chapterId = chapterId,
             readStatus = read
         )
+    }
+
+    private suspend fun internalMarkSeriesReading(chapter: ChapterEntity, read: Boolean) {
+        if (!read) return
+        if (appData.autoMarkMangaReading.firstOrNull() != true) return
+        appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Reading.serialized()))
+    }
+
+    private suspend fun internalMarkSeriesComplete(chapter: ChapterEntity, read: Boolean) {
+        if (!read) return
+        if (appData.autoMarkMangaCompleted.firstOrNull() != true) return
+
+        val manga = mangaDb.getMangaById(chapter.mangaId)
+        if (manga == null) {
+            Clog.e("ReadStatus.internalMarkSeriesComplete: manga not found", NullPointerException("ReadStatus.internalMarkSeriesComplete: manga not found"))
+            return
+        }
+
+        if (manga.lastChapter != chapter.chapter) return
+
+        appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Completed.serialized()))
+        appEventsRepository.postEvent(SystemLogicEvents.PromptMangaRating(chapter.mangaId))
     }
 }
