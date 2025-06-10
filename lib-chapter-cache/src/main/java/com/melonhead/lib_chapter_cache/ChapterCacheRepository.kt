@@ -59,8 +59,8 @@ internal class ChapterCacheRepositoryImpl(
     private val mangaDb: MangaDao,
     private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
-    private val cacheChaptersThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
-        externalScope.launch { cacheImagesForNewChapters(pair.first, pair.second) }
+    private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
+        externalScope.launch { updateChapterCache(pair.first, pair.second) }
     }
 
     private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
@@ -98,14 +98,14 @@ internal class ChapterCacheRepositoryImpl(
 
                             is UserEvent.RefreshManga -> {
                                 launch {
-                                    cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                    updateChapterCacheThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
                                 }
                             }
 
                             is AppLifecycleEvent.ConnectionChanged -> {
                                 if (event.connected) {
                                     launch {
-                                        cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                        updateChapterCacheThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
                                     }
                                 }
                             }
@@ -124,7 +124,7 @@ internal class ChapterCacheRepositoryImpl(
             combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers) { manga, chapters, _ ->
                 manga to chapters
             }.collectLatest { event ->
-                launch { cacheChaptersThrottled(event) }
+                launch { updateChapterCacheThrottled(event) }
             }
         }
     }
@@ -168,7 +168,7 @@ internal class ChapterCacheRepositoryImpl(
         return successFiles.first().nameWithoutExtension.toInt()
     }
 
-    private suspend fun cacheImagesForNewChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+    private suspend fun updateChapterCache(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         if (!context.isNetworkAvailable()) return
 
         val newChapters = chapters
@@ -176,6 +176,11 @@ internal class ChapterCacheRepositoryImpl(
             .filter { !it.blockedChapter }
             .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
         cacheImagesForChapters(manga, newChapters)
+
+        val readChapters = chapters
+            .filter { readStatusRepository.isRead(it) }
+            .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
+        clearImagesForChapters(readChapters)
     }
 
     private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
@@ -256,6 +261,12 @@ internal class ChapterCacheRepositoryImpl(
                     Clog.i("Finished downloading images to cache for ${mangaForChapter.chosenTitle} chapter $chapterTitle")
                 }
             }
+        }
+    }
+
+    private fun clearImagesForChapters(chapters: List<ChapterEntity>) {
+        for (chapter in chapters) {
+            clearChapterFromCache(chapter.mangaId, chapter.id)
         }
     }
 
