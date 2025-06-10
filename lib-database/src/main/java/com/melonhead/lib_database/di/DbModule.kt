@@ -67,6 +67,7 @@ val LibDbModule = module {
                     subclass(SyncQueueEvent.MarkRead::class)
                     subclass(SyncQueueEvent.ChangeRating::class)
                     subclass(SyncQueueEvent.ChangeSeriesReadingStatus::class)
+                    subclass(SyncQueueEvent.UpdateMangaReadingStatus::class)
                 }
             }
         }

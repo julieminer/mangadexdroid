@@ -4,14 +4,27 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,8 +40,9 @@ import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.ChapterOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaRatingDialog
-import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.feature_manga_list.viewmodels.MangaListViewModel
+import com.melonhead.lib_core.scenes.LoadingScreen
+import com.melonhead.lib_core.extensions.networkAvailability
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -74,11 +88,16 @@ internal fun MangaListScreen(
     val refreshStatus by viewModel.refreshStatus.observeAsState(MangaRefreshStatus.None)
     val refreshText by viewModel.refreshText.observeAsState("")
     val readMangaCount = viewModel.readMangaCount
+    val connected by context.networkAvailability().collectAsState(true)
+
+    if (!connected && manga.isEmpty()) {
+        DisconnectedScreen()
+        return
+    }
 
     if (manga.isEmpty()) {
         LoadingScreen(refreshStatus)
     } else {
-
         val itemState = remember(manga, refreshStatus) {
             val items = mutableListOf<Any>()
             manga.forEach { manga ->
@@ -95,7 +114,7 @@ internal fun MangaListScreen(
         LaunchedEffect(refreshStatus) { justPulledRefresh = false }
 
         Column {
-            AnimatedVisibility(visible = refreshStatus !is MangaRefreshStatus.None || isRefreshing.isRefreshing || justPulledRefresh) {
+            AnimatedVisibility(visible = connected && (refreshStatus !is MangaRefreshStatus.None || isRefreshing.isRefreshing || justPulledRefresh)) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -134,7 +153,7 @@ internal fun MangaListScreen(
                     justPulledRefresh = true
                     viewModel.refreshContent()
                 },
-                swipeEnabled = (refreshStatus is MangaRefreshStatus.None) && !isRefreshing.isRefreshing && !justPulledRefresh
+                swipeEnabled = connected && (refreshStatus is MangaRefreshStatus.None) && !isRefreshing.isRefreshing && !justPulledRefresh
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -143,7 +162,7 @@ internal fun MangaListScreen(
                 ) {
                     item {
                         AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing) {
-                            Text(text = "Last Refresh: $refreshText",
+                            Text(text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .align(Alignment.CenterHorizontally)
@@ -183,6 +202,7 @@ internal fun MangaListScreen(
                                 uiChapter = item.first as UIChapter,
                                 uiManga = item.second as UIManga,
                                 refreshStatus = refreshStatus,
+                                connected = connected,
                                 onChapterClicked = { uiManga, uiChapter ->
                                     viewModel.onChapterClicked(context, uiManga.id, uiChapter.id)
                                 },
@@ -195,5 +215,15 @@ internal fun MangaListScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+internal fun DisconnectedScreen() {
+    Column(modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = "Please connect to the internet to continue", fontSize = 16.sp, modifier = Modifier.padding(vertical = 16.dp))
     }
 }

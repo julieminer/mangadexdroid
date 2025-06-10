@@ -26,9 +26,9 @@ val LibWriteSyncRepositoryModule = module {
     includes(DataMangaModule)
     includes(DataRatingModule)
     single<WriteSyncRepository>(createdAtStart = true) {
-        WriteSyncRepositoryImpl(get(), get(), get(), get(), get(), get())
+        WriteSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
     }
     single<ReadSyncRepository>(createdAtStart = true) {
-        ReadSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get())
+        ReadSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
     }
 }

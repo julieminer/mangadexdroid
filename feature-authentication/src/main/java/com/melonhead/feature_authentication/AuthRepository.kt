@@ -1,13 +1,13 @@
 package com.melonhead.feature_authentication
 
-import com.melonhead.data_authentication.models.AuthToken
+import android.content.Context
 import com.melonhead.data_authentication.models.OAuthToken
 import com.melonhead.data_authentication.services.LoginService
-import com.melonhead.data_user.services.UserService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AuthenticationEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,15 +16,13 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 interface AuthRepository {
-    @Deprecated("Deprecated, use oauth variant")
-    suspend fun authenticate(email: String, password: String)
     suspend fun authenticate(email: String, password: String, clientId: String, clientSecret: String)
 }
 
 internal class AuthRepositoryImpl(
+    private val context: Context,
     private val appData: AppData,
     private val loginService: LoginService,
-    private val userService: UserService,
     private val appEventsRepository: AppEventsRepository,
     externalScope: CoroutineScope,
 ) : AuthRepository {
@@ -56,10 +54,9 @@ internal class AuthRepositoryImpl(
     }
 
     private suspend fun refreshOAuthToken(logoutOnFail: Boolean, email: String, apiClient: String, apiSecret: String): OAuthToken? {
-        suspend fun signOut() {
+        fun signOut() {
             if (logoutOnFail) {
                 Clog.e("Signing out, refresh failed", Exception())
-                appData.updateUserId("")
             }
             appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
         }
@@ -77,6 +74,11 @@ internal class AuthRepositoryImpl(
             return null
         }
 
+        // if offline, assume current token is valid
+        if (!context.isNetworkAvailable()) {
+            return OAuthToken(currentToken.first, currentToken.second)
+        }
+
         val newToken = loginService.refreshOAuthToken(logoutOnFail, email, apiClient, apiSecret)
         appData.updateClient(email, apiClient, apiSecret)
         appData.updateToken(session = newToken?.accessToken, refresh = newToken?.refreshToken)
@@ -87,50 +89,7 @@ internal class AuthRepositoryImpl(
         return newToken
     }
 
-    @Deprecated("Use oauth variant")
-    private suspend fun refreshToken(logoutOnFail: Boolean): AuthToken? {
-        suspend fun signOut() {
-            Clog.e("Signing out, refresh failed", Exception())
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
-            appData.updateUserId("")
-        }
-
-        val currentToken = appData.token.firstOrNull()
-        if (currentToken == null) {
-            signOut()
-            return null
-        }
-
-        val newToken = loginService.refreshToken(logoutOnFail)
-        appData.updateToken(session = newToken?.session, refresh = newToken?.refresh)
-        if (newToken == null) {
-            signOut()
-        } else {
-            val userResponse = userService.getInfo()
-            val userId = userResponse?.data?.id
-            if (userId == null) {
-                Clog.i("userResponse = ${userResponse?.toString()}")
-                Clog.e("User info returned null", RuntimeException("User info returned null"))
-            }
-            appData.updateUserId(userId ?: "")
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-        }
-        return newToken
-    }
-
-    @Deprecated("Deprecated, use oauth variant")
-    override suspend fun authenticate(email: String, password: String) {
-        Clog.i("authenticate")
-        appEventsRepository.postEvent(AuthenticationEvent.LoggingIn)
-        val token = loginService.authenticate(email, password)
-        appData.updateToken(session = token?.session, refresh = token?.refresh)
-        if (token != null) {
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-            Clog.i("Refresh: authenticate")
-            appEventsRepository.postEvent(UserEvent.RefreshManga())
-        }
-    }
-
+    // should only be called while online
     override suspend fun authenticate(
         email: String,
         password: String,

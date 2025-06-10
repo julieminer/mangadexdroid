@@ -5,7 +5,6 @@ import com.melonhead.data_authentication.di.DataAuthenticationModule
 import com.melonhead.data_user.di.DataUserModule
 import com.melonhead.feature_authentication.AuthRepository
 import com.melonhead.feature_authentication.AuthRepositoryImpl
-import com.melonhead.feature_authentication.navigation.LoginScreenResolver
 import com.melonhead.feature_authentication.navigation.OauthLoginScreenResolver
 import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_events.di.LibAppEventsModule
@@ -23,13 +22,14 @@ val FeatureAuthenticationModule = module {
     includes(DataAuthenticationModule)
     includes(DataUserModule)
 
-    single<AuthRepository>(createdAtStart = true) { AuthRepositoryImpl(
-        get(),
-        get(),
-        get(),
-        get(),
-        get()
-    ) }
+    single<AuthRepository>(createdAtStart = true) {
+        AuthRepositoryImpl(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
     single<OauthLoginScreenResolver>(createdAtStart = true) { OauthLoginScreenResolver() }
-    single<LoginScreenResolver>(createdAtStart = true) { LoginScreenResolver() }
 }

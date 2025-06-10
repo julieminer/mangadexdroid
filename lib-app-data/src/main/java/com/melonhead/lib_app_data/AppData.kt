@@ -18,7 +18,6 @@ interface AppData {
     val token: Flow<Pair<String, String>?>
     val installDateSeconds: Flow<Long?>
     val lastRefreshDateSeconds: Flow<Long?>
-    val userIdFlow: Flow<String?>
     val autoMarkMangaCompleted: Flow<Boolean>
     val autoMarkMangaReading: Flow<Boolean>
 
@@ -31,7 +30,6 @@ interface AppData {
     suspend fun updateClient(email: String?, apiClient: String?, apiSecret: String?)
     suspend fun updateInstallTime()
     suspend fun updateLastRefreshDate()
-    suspend fun updateUserId(id: String)
     suspend fun updateRenderStyle(renderStyle: RenderStyle)
     suspend fun updateAutoMarkMangaCompleted(autoMarkMangaCompleted: Boolean)
     suspend fun updateAutoMarkMangaReading(autoMarkMangaReading: Boolean)
@@ -51,7 +49,6 @@ internal class AppDataImpl(
     private val CLIENT_EMAIL = stringPreferencesKey("client_email")
     private val AUTH_TOKEN = stringPreferencesKey("auth_token")
     private val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
-    private val USER_ID = stringPreferencesKey("user_id")
     private val INSTALL_DATE = longPreferencesKey("install_date")
     private val REFRESH_TIME = longPreferencesKey("refresh_time")
     private val AUTO_MARK_MANGA_COMPLETED = booleanPreferencesKey("auto_mark_manga_completed")
@@ -80,11 +77,6 @@ internal class AppDataImpl(
     private val refreshTokenFlow: Flow<String> = appContext.dataStore.data.map { preferences ->
         // No type safety.
         preferences[REFRESH_TOKEN] ?: ""
-    }.distinctUntilChanged()
-
-    override val userIdFlow: Flow<String> = appContext.dataStore.data.map { preferences ->
-        // No type safety.
-        preferences[USER_ID] ?: ""
     }.distinctUntilChanged()
 
     override val installDateSeconds: Flow<Long?> = appContext.dataStore.data.map { preferences ->
@@ -167,12 +159,6 @@ internal class AppDataImpl(
     override suspend fun updateAutoMarkMangaReading(autoMarkMangaReading: Boolean) {
         appContext.dataStore.edit { settings ->
             settings[AUTO_MARK_MANGA_READING] = autoMarkMangaReading
-        }
-    }
-
-    override suspend fun updateUserId(id: String) {
-        appContext.dataStore.edit { settings ->
-            settings[USER_ID] = id
         }
     }
 

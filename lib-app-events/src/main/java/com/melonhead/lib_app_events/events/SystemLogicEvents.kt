@@ -7,4 +7,6 @@ sealed class SystemLogicEvents: AppEvent {
 
     // Changes the reading status for a manga series
     data class ChangeMangaReadingStatus(val mangaId: String, val readingStatus: String): SystemLogicEvents()
+
+    data class UpdateMangaReadingStatus(val mangaId: String, val chapterId: String, val readPostedChapter: Boolean): SystemLogicEvents()
 }

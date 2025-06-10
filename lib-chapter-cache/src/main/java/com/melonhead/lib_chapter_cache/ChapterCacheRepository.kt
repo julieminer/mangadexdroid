@@ -4,8 +4,9 @@ import android.content.Context
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
-import com.melonhead.lib_app_events.events.AppEvent
+import com.melonhead.lib_app_events.events.AppLifecycleEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
@@ -15,13 +16,19 @@ import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.downloadFile
 import com.melonhead.lib_read_status.ReadStatusRepository
 import io.ktor.client.HttpClient
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileFilter
 
@@ -40,6 +47,7 @@ interface ChapterCacheRepository {
 }
 
 internal class ChapterCacheRepositoryImpl(
+    private val context: Context,
     private val appData: AppData,
     private val atHomeService: AtHomeService,
     private val appContext: Context,
@@ -51,8 +59,8 @@ internal class ChapterCacheRepositoryImpl(
     private val mangaDb: MangaDao,
     private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
-    private val cacheChaptersThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
-        externalScope.launch { cacheImagesForNewChapters(pair.first, pair.second) }
+    private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
+        externalScope.launch { updateChapterCache(pair.first, pair.second) }
     }
 
     private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
@@ -90,7 +98,15 @@ internal class ChapterCacheRepositoryImpl(
 
                             is UserEvent.RefreshManga -> {
                                 launch {
-                                    cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                    updateChapterCacheThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                }
+                            }
+
+                            is AppLifecycleEvent.ConnectionChanged -> {
+                                if (event.connected) {
+                                    launch {
+                                        updateChapterCacheThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                    }
                                 }
                             }
 
@@ -108,7 +124,7 @@ internal class ChapterCacheRepositoryImpl(
             combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers) { manga, chapters, _ ->
                 manga to chapters
             }.collectLatest { event ->
-                launch { cacheChaptersThrottled(event) }
+                launch { updateChapterCacheThrottled(event) }
             }
         }
     }
@@ -152,12 +168,23 @@ internal class ChapterCacheRepositoryImpl(
         return successFiles.first().nameWithoutExtension.toInt()
     }
 
-    private suspend fun cacheImagesForNewChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+    private suspend fun updateChapterCache(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+        if (!context.isNetworkAvailable()) return
+
         val newChapters = chapters
             .filter { !readStatusRepository.isRead(it) }
             .filter { !it.blockedChapter }
             .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
         cacheImagesForChapters(manga, newChapters)
+
+        Clog.i("Finished downloading images for ${newChapters.count()} new chapters")
+
+        val readChapters = chapters
+            .filter { readStatusRepository.isRead(it) }
+            .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
+        clearImagesForChapters(readChapters)
+
+        Clog.i("Finished removing images for ${readChapters.count()} chapters")
     }
 
     private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
@@ -238,6 +265,12 @@ internal class ChapterCacheRepositoryImpl(
                     Clog.i("Finished downloading images to cache for ${mangaForChapter.chosenTitle} chapter $chapterTitle")
                 }
             }
+        }
+    }
+
+    private fun clearImagesForChapters(chapters: List<ChapterEntity>) {
+        for (chapter in chapters) {
+            clearChapterFromCache(chapter.mangaId, chapter.id)
         }
     }
 

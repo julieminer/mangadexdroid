@@ -1,5 +1,6 @@
 package com.melonhead.lib_sync_queue
 
+import android.content.Context
 import com.melonhead.data_manga.services.MangaService
 import com.melonhead.data_shared.models.ui.MangaRefreshStatus
 import com.melonhead.data_user.services.UserService
@@ -16,6 +17,7 @@ import com.melonhead.lib_database.extensions.from
 import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_read_status.ReadStatusRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +36,7 @@ interface ReadSyncRepository {
 }
 
 internal class ReadSyncRepositoryImpl(
+    private val context: Context,
     private val externalScope: CoroutineScope,
     private val appData: AppData,
     private val userService: UserService,
@@ -79,6 +82,12 @@ internal class ReadSyncRepositoryImpl(
                                 Clog.i("Refresh: Refresh event")
                                 pullMangaThrottled(event)
                             }
+                            is AppLifecycleEvent.ConnectionChanged -> {
+                                if (event.connected) {
+                                    Clog.i("Refresh: Connected to internet")
+                                    pullMangaThrottled(event)
+                                }
+                            }
                         }
                     }
                 }
@@ -89,6 +98,11 @@ internal class ReadSyncRepositoryImpl(
     }
 
     override suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?) {
+        if (!context.isNetworkAvailable()) {
+            refreshCompletable?.complete(Unit)
+            return
+        }
+
         // refresh token
         val refreshCompletionJob = CompletableFuture<Unit>()
         appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))

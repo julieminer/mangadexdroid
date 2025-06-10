@@ -45,6 +45,7 @@ val FeatureMangaListModule = module {
             get(),
             get(),
             get(),
+            get(),
         )
     }
 

@@ -1,5 +1,6 @@
 package com.melonhead.feature_manga_list
 
+import android.content.Context
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.data_shared.models.ui.*
 import com.melonhead.lib_app_data.AppData
@@ -12,6 +13,7 @@ import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_chapter_cache.ChapterCacheRepository
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_sync_queue.ReadSyncRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
@@ -26,6 +28,7 @@ internal interface MangaRepository {
 }
 
 internal class MangaRepositoryImpl(
+    private val context: Context,
     private val externalScope: CoroutineScope,
     private val appData: AppData,
     private val atHomeService: AtHomeService,
@@ -121,6 +124,12 @@ internal class MangaRepositoryImpl(
 
         Clog.i("Chapter not found in cache: $mangaId, $chapterId")
         Clog.e("Chapter not found in cache", RuntimeException("Chapter not found in cache"))
+
+        // if offline, return null
+        if (!context.isNetworkAvailable()) {
+            return null
+        }
+
         val chapterData = atHomeService.getChapterData(chapterId)
         return if (appData.useDataSaver) {
             chapterData?.pagesDataSaver()
