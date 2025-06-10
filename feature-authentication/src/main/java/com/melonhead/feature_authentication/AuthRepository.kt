@@ -1,5 +1,6 @@
 package com.melonhead.feature_authentication
 
+import android.content.Context
 import com.melonhead.data_authentication.models.AuthToken
 import com.melonhead.data_authentication.models.OAuthToken
 import com.melonhead.data_authentication.services.LoginService
@@ -15,12 +16,11 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 interface AuthRepository {
-    @Deprecated("Deprecated, use oauth variant")
-    suspend fun authenticate(email: String, password: String)
     suspend fun authenticate(email: String, password: String, clientId: String, clientSecret: String)
 }
 
 internal class AuthRepositoryImpl(
+    private val context: Context,
     private val appData: AppData,
     private val loginService: LoginService,
     private val appEventsRepository: AppEventsRepository,
@@ -82,42 +82,6 @@ internal class AuthRepositoryImpl(
             signOut()
         }
         return newToken
-    }
-
-    @Deprecated("Use oauth variant")
-    private suspend fun refreshToken(logoutOnFail: Boolean): AuthToken? {
-        fun signOut() {
-            Clog.e("Signing out, refresh failed", Exception())
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
-        }
-
-        val currentToken = appData.token.firstOrNull()
-        if (currentToken == null) {
-            signOut()
-            return null
-        }
-
-        val newToken = loginService.refreshToken(logoutOnFail)
-        appData.updateToken(session = newToken?.session, refresh = newToken?.refresh)
-        if (newToken == null) {
-            signOut()
-        } else {
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-        }
-        return newToken
-    }
-
-    @Deprecated("Deprecated, use oauth variant")
-    override suspend fun authenticate(email: String, password: String) {
-        Clog.i("authenticate")
-        appEventsRepository.postEvent(AuthenticationEvent.LoggingIn)
-        val token = loginService.authenticate(email, password)
-        appData.updateToken(session = token?.session, refresh = token?.refresh)
-        if (token != null) {
-            appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
-            Clog.i("Refresh: authenticate")
-            appEventsRepository.postEvent(UserEvent.RefreshManga())
-        }
     }
 
     override suspend fun authenticate(

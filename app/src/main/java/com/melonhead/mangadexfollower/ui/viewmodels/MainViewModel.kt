@@ -64,12 +64,6 @@ class MainViewModel(
         appData.getClient()
     }.asLiveData(viewModelScope.coroutineContext)
 
-    @Deprecated("Use oauth variant")
-    fun authenticate(email: String, password: String) = viewModelScope.launch {
-        // TODO: replace with event?
-        authRepository.authenticate(email, password)
-    }
-
     fun authenticate(email: String, password: String, clientId: String, clientSecret: String) = viewModelScope.launch {
         // TODO: replace with event?
         authRepository.authenticate(email, password, clientId, clientSecret)
