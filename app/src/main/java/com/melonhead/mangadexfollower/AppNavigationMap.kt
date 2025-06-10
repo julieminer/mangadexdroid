@@ -1,6 +1,5 @@
 package com.melonhead.mangadexfollower
 
-import com.melonhead.feature_authentication.navigation.LoginScreenResolver
 import com.melonhead.feature_authentication.navigation.OauthLoginScreenResolver
 import com.melonhead.feature_manga_list.navigation.MangaListScreenResolver
 import com.melonhead.feature_native_chapter_viewer.navigation.NativeChapterViewerActivityResolver
@@ -18,7 +17,6 @@ class AppNavigationMap(
     nativeChapterViewerActivityResolver: NativeChapterViewerActivityResolver,
     webViewActivityResolver: WebViewChapterViewerActivityResolver,
 
-    loginScreenResolver: LoginScreenResolver,
     oauthLoginScreenResolver: OauthLoginScreenResolver,
 ) {
     init {
@@ -28,7 +26,6 @@ class AppNavigationMap(
         resolverMap.registerResolver(ActivityKey.MainActivity::class.java, mainActivityResolver)
 
         // screens
-        resolverMap.registerResolver(ScreenKey.LoginScreen::class.java, loginScreenResolver)
         resolverMap.registerResolver(ScreenKey.OauthLoginScreen::class.java, oauthLoginScreenResolver)
         resolverMap.registerResolver(ScreenKey.MangaListScreen::class.java, mangaListScreenResolver)
     }
