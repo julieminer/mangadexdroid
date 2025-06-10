@@ -12,6 +12,6 @@ val LibChapterCacheRepositoryModule = module {
     includes(LibAppEventsModule)
     includes(LibReadStatusRepositoryModule)
     single<ChapterCacheRepository> {
-        ChapterCacheRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
+        ChapterCacheRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get(), get())
     }
 }

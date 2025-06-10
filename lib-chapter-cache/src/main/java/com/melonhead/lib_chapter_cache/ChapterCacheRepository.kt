@@ -4,8 +4,9 @@ import android.content.Context
 import com.melonhead.data_at_home.AtHomeService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
-import com.melonhead.lib_app_events.events.AppEvent
+import com.melonhead.lib_app_events.events.AppLifecycleEvent
 import com.melonhead.lib_app_events.events.UserEvent
+import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_core.extensions.throttleLatest
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
@@ -15,13 +16,19 @@ import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.downloadFile
 import com.melonhead.lib_read_status.ReadStatusRepository
 import io.ktor.client.HttpClient
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileFilter
 
@@ -40,6 +47,7 @@ interface ChapterCacheRepository {
 }
 
 internal class ChapterCacheRepositoryImpl(
+    private val context: Context,
     private val appData: AppData,
     private val atHomeService: AtHomeService,
     private val appContext: Context,
@@ -91,6 +99,14 @@ internal class ChapterCacheRepositoryImpl(
                             is UserEvent.RefreshManga -> {
                                 launch {
                                     cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                }
+                            }
+
+                            is AppLifecycleEvent.ConnectionChanged -> {
+                                if (event.connected) {
+                                    launch {
+                                        cacheChaptersThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
+                                    }
                                 }
                             }
 
