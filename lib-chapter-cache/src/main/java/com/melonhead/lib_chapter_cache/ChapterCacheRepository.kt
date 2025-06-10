@@ -169,6 +169,8 @@ internal class ChapterCacheRepositoryImpl(
     }
 
     private suspend fun cacheImagesForNewChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+        if (!context.isNetworkAvailable()) return
+
         val newChapters = chapters
             .filter { !readStatusRepository.isRead(it) }
             .filter { !it.blockedChapter }
