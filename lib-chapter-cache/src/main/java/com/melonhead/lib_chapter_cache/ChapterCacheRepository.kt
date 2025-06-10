@@ -177,10 +177,14 @@ internal class ChapterCacheRepositoryImpl(
             .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
         cacheImagesForChapters(manga, newChapters)
 
+        Clog.i("Finished downloading images for ${newChapters.count()} new chapters")
+
         val readChapters = chapters
             .filter { readStatusRepository.isRead(it) }
             .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
         clearImagesForChapters(readChapters)
+
+        Clog.i("Finished removing images for ${readChapters.count()} chapters")
     }
 
     private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
