@@ -3,6 +3,7 @@ package com.melonhead.feature_authentication.ui.scenes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
@@ -104,6 +105,8 @@ internal fun OauthLoginScreen(
             label = { Text("Email") },
             singleLine = true,
             modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
                 .padding(bottom = 8.dp)
                 .onGloballyPositioned {
                     emailNode.boundingBox = it.boundsInWindow()
@@ -144,6 +147,8 @@ internal fun OauthLoginScreen(
                 }
             },
             modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
                 .padding(bottom = 24.dp)
                 .onGloballyPositioned {
                     passwordNode.boundingBox = it.boundsInWindow()
@@ -169,6 +174,8 @@ internal fun OauthLoginScreen(
             label = { Text("Api Client") },
             singleLine = true,
             modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
                 .padding(bottom = 8.dp)
                 .onGloballyPositioned {
 //                    emailNode.boundingBox = it.boundsInWindow()
@@ -209,6 +216,8 @@ internal fun OauthLoginScreen(
                 }
             },
             modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
                 .padding(bottom = 24.dp)
                 .onGloballyPositioned {
 //                    passwordNode.boundingBox = it.boundsInWindow()
