@@ -42,7 +42,7 @@ import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaRatingDialog
 import com.melonhead.feature_manga_list.viewmodels.MangaListViewModel
 import com.melonhead.lib_core.scenes.LoadingScreen
-import com.melonhead.lib_networking.extensions.networkAvailability
+import com.melonhead.lib_core.extensions.networkAvailability
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
