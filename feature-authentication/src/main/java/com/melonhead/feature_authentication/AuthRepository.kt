@@ -3,7 +3,6 @@ package com.melonhead.feature_authentication
 import com.melonhead.data_authentication.models.AuthToken
 import com.melonhead.data_authentication.models.OAuthToken
 import com.melonhead.data_authentication.services.LoginService
-import com.melonhead.data_user.services.UserService
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AuthenticationEvent
@@ -24,7 +23,6 @@ interface AuthRepository {
 internal class AuthRepositoryImpl(
     private val appData: AppData,
     private val loginService: LoginService,
-    private val userService: UserService,
     private val appEventsRepository: AppEventsRepository,
     externalScope: CoroutineScope,
 ) : AuthRepository {
@@ -56,10 +54,9 @@ internal class AuthRepositoryImpl(
     }
 
     private suspend fun refreshOAuthToken(logoutOnFail: Boolean, email: String, apiClient: String, apiSecret: String): OAuthToken? {
-        suspend fun signOut() {
+        fun signOut() {
             if (logoutOnFail) {
                 Clog.e("Signing out, refresh failed", Exception())
-                appData.updateUserId("")
             }
             appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
         }
@@ -89,10 +86,9 @@ internal class AuthRepositoryImpl(
 
     @Deprecated("Use oauth variant")
     private suspend fun refreshToken(logoutOnFail: Boolean): AuthToken? {
-        suspend fun signOut() {
+        fun signOut() {
             Clog.e("Signing out, refresh failed", Exception())
             appEventsRepository.postEvent(AuthenticationEvent.LoggedOut)
-            appData.updateUserId("")
         }
 
         val currentToken = appData.token.firstOrNull()
@@ -106,13 +102,6 @@ internal class AuthRepositoryImpl(
         if (newToken == null) {
             signOut()
         } else {
-            val userResponse = userService.getInfo()
-            val userId = userResponse?.data?.id
-            if (userId == null) {
-                Clog.i("userResponse = ${userResponse?.toString()}")
-                Clog.e("User info returned null", RuntimeException("User info returned null"))
-            }
-            appData.updateUserId(userId ?: "")
             appEventsRepository.postEvent(AuthenticationEvent.LoggedIn)
         }
         return newToken

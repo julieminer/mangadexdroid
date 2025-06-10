@@ -2,7 +2,6 @@ package com.melonhead.data_user.services
 
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.data_shared.models.Chapter
-import com.melonhead.data_user.models.UserResponse
 import com.melonhead.data_user.routes.HttpRoutes
 import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.catching
@@ -17,7 +16,6 @@ import io.ktor.http.contentType
 
 interface UserService {
     suspend fun getFollowedChapters(): List<Chapter>
-    suspend fun getInfo(): UserResponse?
 }
 
 internal class UserServiceImpl(
@@ -41,19 +39,6 @@ internal class UserServiceImpl(
                         parameters.append("limit", "100")
                         parameters.append("offset", "$offset")
                     }
-                }
-            }
-        }
-    }
-
-    override suspend fun getInfo(): UserResponse? {
-        val session = appData.getSession() ?: return null
-        Clog.i("Get user")
-        return client.catching("getInfo") {
-            client.get(HttpRoutes.USER_ME_URL) {
-                headers {
-                    contentType(ContentType.Application.Json)
-                    bearerAuth(session)
                 }
             }
         }

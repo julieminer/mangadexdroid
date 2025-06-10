@@ -27,7 +27,6 @@ val FeatureAuthenticationModule = module {
         get(),
         get(),
         get(),
-        get(),
         get()
     ) }
     single<OauthLoginScreenResolver>(createdAtStart = true) { OauthLoginScreenResolver() }
