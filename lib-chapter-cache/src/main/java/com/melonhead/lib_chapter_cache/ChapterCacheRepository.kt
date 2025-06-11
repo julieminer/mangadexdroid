@@ -35,6 +35,7 @@ import java.io.FileFilter
 sealed class CachingStatus {
     data object None: CachingStatus()
     data object StartedCacheOperation: CachingStatus()
+    data class Caching(val chapterId: String): CachingStatus()
     data object FinishedCacheOperation: CachingStatus()
 }
 
