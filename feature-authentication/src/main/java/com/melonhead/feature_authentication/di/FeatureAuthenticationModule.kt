@@ -10,6 +10,10 @@ import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import org.koin.core.module.dsl.createdAtStart
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.withOptions
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val FeatureAuthenticationModule = module {
@@ -22,14 +26,6 @@ val FeatureAuthenticationModule = module {
     includes(DataAuthenticationModule)
     includes(DataUserModule)
 
-    single<AuthRepository>(createdAtStart = true) {
-        AuthRepositoryImpl(
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-        )
-    }
-    single<OauthLoginScreenResolver>(createdAtStart = true) { OauthLoginScreenResolver() }
+    singleOf(::AuthRepositoryImpl).bind<AuthRepository>().withOptions { createdAtStart() }
+    singleOf(::OauthLoginScreenResolver).bind<OauthLoginScreenResolver>().withOptions { createdAtStart() }
 }

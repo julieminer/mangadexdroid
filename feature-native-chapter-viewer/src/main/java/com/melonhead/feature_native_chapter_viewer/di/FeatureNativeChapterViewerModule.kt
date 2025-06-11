@@ -6,6 +6,8 @@ import com.melonhead.feature_native_chapter_viewer.navigation.NativeChapterViewe
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import com.melonhead.lib_navigation.di.LibNavigationModule
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val FeatureNativeChapterViewerModule = module {
@@ -13,9 +15,7 @@ val FeatureNativeChapterViewerModule = module {
     includes(LibNavigationModule)
     includes(LibAppDataModule)
 
-    viewModel {
-        ChapterViewModel(get(), get(), get())
-    }
+    viewModelOf(::ChapterViewModel)
 
-    single { NativeChapterViewerActivityResolver() }
+    singleOf(::NativeChapterViewerActivityResolver)
 }
