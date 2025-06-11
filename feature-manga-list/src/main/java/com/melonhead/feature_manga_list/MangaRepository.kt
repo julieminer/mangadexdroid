@@ -6,6 +6,7 @@ import com.melonhead.data_shared.models.ui.*
 import com.melonhead.lib_app_data.AppData
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.*
+import com.melonhead.lib_chapter_cache.CachingStatus
 import com.melonhead.lib_read_status.ReadStatusRepository
 import com.melonhead.lib_database.chapter.ChapterDao
 import com.melonhead.lib_database.chapter.ChapterEntity
@@ -46,7 +47,7 @@ internal class MangaRepositoryImpl(
 
     // combine all manga series and chapters
     override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers, chapterCacheRepository.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
-        generateUIManga(dbSeries, dbChapters)
+        generateUIManga(dbSeries, dbChapters, cacheStatus)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
 
     init {
@@ -76,7 +77,7 @@ internal class MangaRepositoryImpl(
         }
     }
 
-    private fun generateUIManga(dbSeries: List<MangaEntity>, dbChapters: List<ChapterEntity>): List<UIManga> {
+    private fun generateUIManga(dbSeries: List<MangaEntity>, dbChapters: List<ChapterEntity>, cachingStatus: CachingStatus): List<UIManga> {
         // map the series and chapters into UIManga, sorted from most recent to least
         val uiManga = dbSeries.mapNotNull { manga ->
             var hasExternalChapters = false
@@ -90,6 +91,7 @@ internal class MangaRepositoryImpl(
                     createdDate = chapter.createdAt.epochSeconds,
                     read = read,
                     blocked = chapter.blockedChapter,
+                    isDownloadingCache = (cachingStatus as? CachingStatus.Caching)?.chapterId == chapter.id,
                     externalUrl = chapter.externalUrl,
                     cachedPages = chapterCacheRepository.getChapterPageCountFromCache(manga.id, chapter.id)
                 )
