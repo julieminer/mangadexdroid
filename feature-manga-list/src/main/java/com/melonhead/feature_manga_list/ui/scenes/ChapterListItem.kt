@@ -73,7 +73,12 @@ internal fun ChapterListItem(
                         )
                     }
 
-                    if (uiChapter.cachedPages != null) {
+                    if (uiChapter.isDownloadingCache) {
+                        CircularProgressIndicator(modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .size(12.dp),
+                            strokeWidth = 2.dp)
+                    } else if (uiChapter.cachedPages != null) {
                         Text(
                             text = "${uiChapter.cachedPages} pages",
                             color = MaterialTheme.colorScheme.tertiary,
