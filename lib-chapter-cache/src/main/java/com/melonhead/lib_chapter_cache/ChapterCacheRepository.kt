@@ -196,6 +196,7 @@ internal class ChapterCacheRepositoryImpl(
     private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         val cacheDirectory = appContext.cacheDir
         for (chapter in chapters) {
+            mutableCachingStatus.value = CachingStatus.Caching(chapter.id)
             val mangaForChapter = manga.find { it.id == chapter.mangaId } ?: continue
             if (mangaForChapter.useWebview) continue
             val mangaDirectory = File(cacheDirectory, mangaForChapter.id)
