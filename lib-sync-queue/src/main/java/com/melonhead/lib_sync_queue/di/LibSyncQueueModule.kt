@@ -13,6 +13,8 @@ import com.melonhead.lib_sync_queue.ReadSyncRepository
 import com.melonhead.lib_sync_queue.ReadSyncRepositoryImpl
 import com.melonhead.lib_sync_queue.WriteSyncRepository
 import com.melonhead.lib_sync_queue.WriteSyncRepositoryImpl
+import org.koin.core.module.dsl.singleOf
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val LibWriteSyncRepositoryModule = module {
@@ -25,10 +27,6 @@ val LibWriteSyncRepositoryModule = module {
     includes(DataUserModule)
     includes(DataMangaModule)
     includes(DataRatingModule)
-    single<WriteSyncRepository>(createdAtStart = true) {
-        WriteSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
-    }
-    single<ReadSyncRepository>(createdAtStart = true) {
-        ReadSyncRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get())
-    }
+    singleOf(::WriteSyncRepositoryImpl).bind<WriteSyncRepository>()
+    singleOf(::ReadSyncRepositoryImpl).bind<ReadSyncRepository>()
 }

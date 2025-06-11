@@ -15,6 +15,10 @@ import com.melonhead.mangadexfollower.AppNavigationMap
 import com.melonhead.mangadexfollower.navigation.MainActivityResolver
 import com.melonhead.mangadexfollower.ui.viewmodels.MainViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.createdAtStart
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.withOptions
 import org.koin.dsl.module
 
 val AppModule = module {
@@ -31,10 +35,8 @@ val AppModule = module {
     includes(FeatureNativeChapterViewerModule)
     includes(FeatureWebViewChapterViewerModule)
 
-    viewModel {
-        MainViewModel(get(), get(), get())
-    }
+    viewModelOf(::MainViewModel)
 
-    single(createdAtStart = true) { MainActivityResolver() }
-    single(createdAtStart = true) { AppNavigationMap(get(), get(), get(), get(), get(), get()) }
+    singleOf(::MainActivityResolver).withOptions { createdAtStart() }
+    singleOf(::AppNavigationMap).withOptions { createdAtStart() }
 }

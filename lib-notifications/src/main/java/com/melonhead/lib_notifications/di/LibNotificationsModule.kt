@@ -9,6 +9,10 @@ import com.melonhead.lib_notifications.NewChapterNotificationChannel
 import com.melonhead.lib_notifications.NotificationsRepository
 import com.melonhead.lib_notifications.NotificationsRepositoryImpl
 import com.melonhead.lib_read_status.di.LibReadStatusRepositoryModule
+import org.koin.core.module.dsl.createdAtStart
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.withOptions
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val LibNotificationsModule = module {
@@ -18,8 +22,8 @@ val LibNotificationsModule = module {
     includes(LibDbModule)
     includes(LibReadStatusRepositoryModule)
 
-    single { NewChapterNotificationChannel(get()) }
-    single { AuthFailedNotificationChannel(get()) }
+    singleOf(::NewChapterNotificationChannel)
+    singleOf(::AuthFailedNotificationChannel)
 
-    single<NotificationsRepository>(createdAtStart = true) { NotificationsRepositoryImpl(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    singleOf(::NotificationsRepositoryImpl).bind<NotificationsRepository>().withOptions { createdAtStart() }
 }

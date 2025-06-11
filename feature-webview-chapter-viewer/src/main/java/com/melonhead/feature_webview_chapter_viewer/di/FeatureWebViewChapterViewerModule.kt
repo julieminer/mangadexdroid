@@ -4,12 +4,14 @@ import com.melonhead.feature_webview_chapter_viewer.navigation.WebViewChapterVie
 import com.melonhead.feature_webview_chapter_viewer.viewmodels.WebViewViewModel
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val FeatureWebViewChapterViewerModule = module {
     includes(LibAppEventsModule)
 
-    viewModel { WebViewViewModel(get()) }
+    viewModelOf(::WebViewViewModel)
 
-    single { WebViewChapterViewerActivityResolver() }
+    singleOf(::WebViewChapterViewerActivityResolver)
 }

@@ -17,6 +17,11 @@ import com.melonhead.lib_database.di.LibDbModule
 import com.melonhead.lib_notifications.di.LibNotificationsModule
 import com.melonhead.lib_sync_queue.di.LibWriteSyncRepositoryModule
 import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.createdAtStart
+import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.withOptions
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val FeatureMangaListModule = module {
@@ -34,22 +39,8 @@ val FeatureMangaListModule = module {
     includes(DataMangaModule)
     includes(DataRatingModule)
 
-    single<MangaRepository>(createdAtStart = true) {
-        MangaRepositoryImpl(
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-            get(),
-        )
-    }
+    singleOf(::MangaRepositoryImpl).bind<MangaRepository>().withOptions { createdAtStart() }
+    singleOf(::MangaListScreenResolver).withOptions { createdAtStart() }
 
-    viewModel { MangaListViewModel(get(), get(), get(), get(), get()) }
-
-    single<MangaListScreenResolver>(createdAtStart = true) { MangaListScreenResolver() }
+    viewModelOf(::MangaListViewModel)
 }
