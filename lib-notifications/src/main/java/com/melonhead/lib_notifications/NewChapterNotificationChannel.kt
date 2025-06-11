@@ -55,12 +55,16 @@ data class NewChapterNotificationChannel(
         createNotificationChannel(context)
 
         val notificationManager = NotificationManagerCompat.from(context)
+        val activeNotifications = notificationManager.activeNotifications
 
         Clog.i("post: New chapters for ${series.count()} manga")
         series.forEach { chapter ->
+            val id = notificationId(chapter)
+            // don't re-post notifications that have already been posted
+            if (activeNotifications.any { it.id == id }) return@forEach
             val pendingIntent = pendingIntent(context, chapter.mangaId, chapter.chapterId) ?: return@forEach
             val notification = buildNotification(context, pendingIntent, chapter.mangaTitle, chapter.chapterTitle)
-            notificationManager.notify(notificationId(chapter), notification)
+            notificationManager.notify(id, notification)
             delay(1000) // ensures android actually posts all notifications
         }
     }
