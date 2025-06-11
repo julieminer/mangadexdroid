@@ -35,6 +35,7 @@ import java.io.FileFilter
 sealed class CachingStatus {
     data object None: CachingStatus()
     data object StartedCacheOperation: CachingStatus()
+    data class Caching(val chapterId: String): CachingStatus()
     data object FinishedCacheOperation: CachingStatus()
 }
 
@@ -59,6 +60,7 @@ internal class ChapterCacheRepositoryImpl(
     private val mangaDb: MangaDao,
     private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
+
     private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
         externalScope.launch { updateChapterCache(pair.first, pair.second) }
     }
@@ -168,128 +170,135 @@ internal class ChapterCacheRepositoryImpl(
         return successFiles.first().nameWithoutExtension.toInt()
     }
 
-    private suspend fun updateChapterCache(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
+    private fun updateChapterCache(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         if (!context.isNetworkAvailable()) return
 
-        val newChapters = chapters
-            .filter { !readStatusRepository.isRead(it) }
-            .filter { !it.blockedChapter }
-            .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
-        cacheImagesForChapters(manga, newChapters)
+        externalScope.launch(Dispatchers.IO) {
+            cacheOperation {
+                val newChapters = chapters
+                    .filter { !readStatusRepository.isRead(it) }
+                    .filter { !it.blockedChapter }
+                    .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
+                cacheImagesForChapters(manga, newChapters)
 
-        Clog.i("Finished downloading images for ${newChapters.count()} new chapters")
+                Clog.i("Finished downloading images for ${newChapters.count()} new chapters")
 
-        val readChapters = chapters
-            .filter { readStatusRepository.isRead(it) }
-            .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
-        clearImagesForChapters(readChapters)
+                val readChapters = chapters
+                    .filter { readStatusRepository.isRead(it) }
+                    .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
+                clearImagesForChapters(readChapters)
 
-        Clog.i("Finished removing images for ${readChapters.count()} chapters")
+                Clog.i("Finished removing images for ${readChapters.count()} chapters")
+            }
+        }
     }
 
     private suspend fun cacheImagesForChapters(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
-        cacheOperation {
-            val cacheDirectory = appContext.cacheDir
-            for (chapter in chapters) {
-                val mangaForChapter = manga.find { it.id == chapter.mangaId } ?: continue
-                if (mangaForChapter.useWebview) continue
-                val mangaDirectory = File(cacheDirectory, mangaForChapter.id)
+        val cacheDirectory = appContext.cacheDir
+        for (chapter in chapters) {
+            mutableCachingStatus.value = CachingStatus.Caching(chapter.id)
+            val mangaForChapter = manga.find { it.id == chapter.mangaId } ?: continue
+            if (mangaForChapter.useWebview) continue
+            val mangaDirectory = File(cacheDirectory, mangaForChapter.id)
 
-                if (!mangaDirectory.exists()) {
-                    mangaDirectory.mkdir()
+            if (!mangaDirectory.exists()) {
+                mangaDirectory.mkdir()
+            }
+
+            val chapterDirectory = File(mangaDirectory, chapter.id)
+            if (!chapterDirectory.exists()) {
+                chapterDirectory.mkdir()
+            }
+
+            if (chapterDirectory.listFiles(FileFilter { it.extension == "pages" })?.isNotEmpty() == true) continue
+            val chapterData = getChapterData(chapter.id)
+            if (chapterData.isNullOrEmpty()) continue
+
+            Clog.i("Caching images for manga ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle}")
+
+            val oldFiles = chapterDirectory.listFiles() ?: arrayOf()
+            if (oldFiles.none { it.extension == "pages" } && oldFiles.count() != chapterData.count()) {
+                Clog.w("Found bad file count for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle}")
+                for (file in chapterDirectory.listFiles()!!) {
+                    file.delete()
                 }
+            }
 
-                val chapterDirectory = File(mangaDirectory, chapter.id)
-                if (!chapterDirectory.exists()) {
-                    chapterDirectory.mkdir()
-                }
-
-                if (chapterDirectory.listFiles(FileFilter { it.extension == "pages" })?.isNotEmpty() == true) continue
-                val chapterData = getChapterData(chapter.id)
-                if (chapterData.isNullOrEmpty()) continue
-
-                Clog.i("Caching images for manga ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle}")
-
-                val oldFiles = chapterDirectory.listFiles() ?: arrayOf()
-                if (oldFiles.none { it.extension == "pages" } && oldFiles.count() != chapterData.count()) {
-                    Clog.w("Found bad file count for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle}")
-                    for (file in chapterDirectory.listFiles()!!) {
-                        file.delete()
+            val chapterTitle = chapter.chapterTitle ?: chapter.chapter
+            Clog.i("Downloading images to cache for ${mangaForChapter.chosenTitle} chapter $chapterTitle")
+            val jobsList = mutableListOf<Deferred<Boolean>>()
+            withContext(Dispatchers.IO) {
+                for ((i, page) in chapterData.withIndex()) {
+                    Clog.i("Downloading page $i for ${mangaForChapter.chosenTitle} chapter $chapterTitle - $page")
+                    val fileExtension = page.substringAfterLast(".")
+                    val pageFile = File(chapterDirectory, "$i.$fileExtension")
+                    if (pageFile.exists()) {
+                        pageFile.delete()
+                    } else {
+                        pageFile.createNewFile()
                     }
-                }
-
-                val chapterTitle = chapter.chapterTitle ?: chapter.chapter
-                Clog.i("Downloading images to cache for ${mangaForChapter.chosenTitle} chapter $chapterTitle")
-                val jobsList = mutableListOf<Deferred<Boolean>>()
-                withContext(Dispatchers.IO) {
-                    for ((i, page) in chapterData.withIndex()) {
-                        Clog.i("Downloading page $i for ${mangaForChapter.chosenTitle} chapter $chapterTitle - $page")
-                        val fileExtension = page.substringAfterLast(".")
-                        val pageFile = File(chapterDirectory, "$i.$fileExtension")
-                        if (pageFile.exists()) {
-                            pageFile.delete()
-                        } else {
-                            pageFile.createNewFile()
-                        }
-                        val downloadJob = async {
-                            try {
-                                val result = httpClient.downloadFile(pageFile, page)
-                                if (result) {
-                                    Clog.i("Finished downloading page $i for ${mangaForChapter.chosenTitle} chapter $chapterTitle - $page")
-                                    true
-                                } else {
-                                    pageFile.delete()
-                                    Clog.w("Failed to download page $i for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle} - $page")
-                                    false
-                                }
-                            } catch (e: Exception) {
+                    val downloadJob = async {
+                        try {
+                            val result = httpClient.downloadFile(pageFile, page)
+                            if (result) {
+                                Clog.i("Finished downloading page $i for ${mangaForChapter.chosenTitle} chapter $chapterTitle - $page")
+                                true
+                            } else {
                                 pageFile.delete()
-                                Clog.w("Error downloading page $i for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle} - $page")
-                                Clog.e("Error downloading page", e)
+                                Clog.w("Failed to download page $i for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle} - $page")
                                 false
                             }
+                        } catch (e: Exception) {
+                            pageFile.delete()
+                            Clog.w("Error downloading page $i for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle} - $page")
+                            Clog.e("Error downloading page", e)
+                            false
                         }
-                        jobsList.add(downloadJob)
                     }
+                    jobsList.add(downloadJob)
                 }
-                if (jobsList.awaitAll().any { false } || jobsList.size != chapterData.count()) {
-                    chapterDirectory.deleteRecursively()
-                    Clog.w("Failed to download images to cache for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle}")
-                    continue
-                }
+            }
+            if (jobsList.awaitAll().any { false } || jobsList.size != chapterData.count()) {
+                chapterDirectory.deleteRecursively()
+                Clog.w("Failed to download images to cache for ${mangaForChapter.chosenTitle} chapter ${chapter.chapterTitle}")
+                continue
+            }
 
-                val newFiles = chapterDirectory.listFiles() ?: continue
-                if (newFiles.count() == chapterData.count()) {
-                    val successFile = File(chapterDirectory, "${chapterData.count()}.pages")
-                    successFile.createNewFile()
-                    Clog.i("Finished downloading images to cache for ${mangaForChapter.chosenTitle} chapter $chapterTitle")
-                }
+            val newFiles = chapterDirectory.listFiles() ?: continue
+            if (newFiles.count() == chapterData.count()) {
+                val successFile = File(chapterDirectory, "${chapterData.count()}.pages")
+                successFile.createNewFile()
+                Clog.i("Finished downloading images to cache for ${mangaForChapter.chosenTitle} chapter $chapterTitle")
             }
         }
     }
 
     private fun clearImagesForChapters(chapters: List<ChapterEntity>) {
         for (chapter in chapters) {
-            clearChapterFromCache(chapter.mangaId, chapter.id)
+            clearChapterFromCacheInternal(chapter.mangaId, chapter.id)
+        }
+    }
+
+    private fun clearChapterFromCacheInternal(mangaId: String, chapterId: String) {
+        try {
+            Clog.i("Clearing cache for manga $mangaId chapter $chapterId")
+            val cacheDirectory = appContext.cacheDir
+            val mangaDirectory = File(cacheDirectory, mangaId)
+            val chapterDirectory = File(mangaDirectory, chapterId)
+            if (chapterDirectory.exists()) {
+                val result = chapterDirectory.deleteRecursively()
+                Clog.i("Cleared cache for manga $mangaId chapter $chapterId - $result")
+            }
+        } catch (e: Exception) {
+            Clog.w("Error clearing cache for manga $mangaId chapter $chapterId")
+            Clog.e("Error clearing cache for manga", e)
         }
     }
 
     override fun clearChapterFromCache(mangaId: String, chapterId: String) {
         externalScope.launch {
             cacheOperation {
-                try {
-                    Clog.i("Clearing cache for manga $mangaId chapter $chapterId")
-                    val cacheDirectory = appContext.cacheDir
-                    val mangaDirectory = File(cacheDirectory, mangaId)
-                    val chapterDirectory = File(mangaDirectory, chapterId)
-                    if (chapterDirectory.exists()) {
-                        val result = chapterDirectory.deleteRecursively()
-                        Clog.i("Cleared cache for manga $mangaId chapter $chapterId - $result")
-                    }
-                } catch (e: Exception) {
-                    Clog.w("Error clearing cache for manga $mangaId chapter $chapterId")
-                    Clog.e("Error clearing cache for manga", e)
-                }
+                clearChapterFromCacheInternal(mangaId, chapterId)
             }
         }
     }

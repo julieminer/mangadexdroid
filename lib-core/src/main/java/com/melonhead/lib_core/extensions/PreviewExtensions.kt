@@ -28,6 +28,7 @@ object Previews {
             "Test Title",
             Clock.System.now().epochSeconds,
             true,
+            isDownloadingCache = false,
             blocked = false,
         ),
         UIChapter(
@@ -36,6 +37,16 @@ object Previews {
             "Test Title 2",
             Clock.System.now().epochSeconds,
             false,
+            isDownloadingCache = false,
+            blocked = false,
+        ),
+        UIChapter(
+            "",
+            "102",
+            "Test Title 2",
+            Clock.System.now().epochSeconds,
+            false,
+            isDownloadingCache = true,
             blocked = false,
         )
     )

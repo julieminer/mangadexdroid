@@ -12,6 +12,7 @@ data class UIChapter(
     val createdDate: Long,
     val read: Boolean,
     val blocked: Boolean,
+    val isDownloadingCache: Boolean,
     val externalUrl: String? = null,
     val cachedPages: Int? = null,
 ) :

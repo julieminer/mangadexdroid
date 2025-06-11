@@ -73,7 +73,12 @@ internal fun ChapterListItem(
                         )
                     }
 
-                    if (uiChapter.cachedPages != null) {
+                    if (uiChapter.isDownloadingCache) {
+                        CircularProgressIndicator(modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .size(12.dp),
+                            strokeWidth = 2.dp)
+                    } else if (uiChapter.cachedPages != null) {
                         Text(
                             text = "${uiChapter.cachedPages} pages",
                             color = MaterialTheme.colorScheme.tertiary,
@@ -93,7 +98,7 @@ internal fun ChapterListItem(
                     fontSize = 12.sp
                 )
             }
-            if (refreshStatus !is MangaRefreshStatus.None && uiChapter.read != true) {
+            if (refreshStatus is MangaRefreshStatus.ReadStatus && !uiChapter.read) {
                 CircularProgressIndicator(modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .size(12.dp),
@@ -101,7 +106,7 @@ internal fun ChapterListItem(
             } else {
                 Text(modifier = Modifier.align(Alignment.CenterVertically),
                     color = if (canInteract) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    text = if (uiChapter.read != true) "NEW" else "",
+                    text = if (!uiChapter.read) "NEW" else "",
                     fontWeight = FontWeight.Medium,
                     fontSize = 12.sp)
             }
@@ -123,7 +128,7 @@ private fun ChapterPreview() {
                 onChapterClicked = { _, _ -> },
                 onChapterLongPressed = { _, _ -> })
             ChapterListItem(
-                uiChapter = Previews.previewUIChapters().first().copy(read = false),
+                uiChapter = Previews.previewUIChapters().first().copy(read = false, isDownloadingCache = true),
                 uiManga = manga,
                 refreshStatus = MangaRefreshStatus.ReadStatus,
                 connected = true,
