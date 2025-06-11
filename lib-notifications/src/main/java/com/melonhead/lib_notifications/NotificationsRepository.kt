@@ -102,7 +102,7 @@ internal class NotificationsRepositoryImpl(
             .map {
                 ChapterNotification(
                     chapterId = it.id,
-                    chapterTitle = it.chapterTitle ?: "${it.chapter}",
+                    chapterTitle = "${it.chapter}",
                     mangaId = it.mangaId,
                     mangaTitle = manga.find { manga -> manga.id == it.mangaId }?.chosenTitle ?: "",
                 )

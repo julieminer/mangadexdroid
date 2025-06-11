@@ -75,7 +75,7 @@ data class NewChapterNotificationChannel(
     }
 
     private fun notificationId(chapterNotification: ChapterNotification): Int {
-        return chapterNotification.mangaId.hashCode() + chapterNotification.chapterId.hashCode()
+        return chapterNotification.mangaId.hashCode() + chapterNotification.chapterTitle.hashCode()
     }
 
     companion object {
