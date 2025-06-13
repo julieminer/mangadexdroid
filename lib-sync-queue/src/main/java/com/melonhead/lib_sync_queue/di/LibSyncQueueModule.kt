@@ -13,7 +13,9 @@ import com.melonhead.lib_sync_queue.ReadSyncRepository
 import com.melonhead.lib_sync_queue.ReadSyncRepositoryImpl
 import com.melonhead.lib_sync_queue.WriteSyncRepository
 import com.melonhead.lib_sync_queue.WriteSyncRepositoryImpl
+import org.koin.core.module.dsl.createdAtStart
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.withOptions
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
@@ -27,6 +29,6 @@ val LibWriteSyncRepositoryModule = module {
     includes(DataUserModule)
     includes(DataMangaModule)
     includes(DataRatingModule)
-    singleOf(::WriteSyncRepositoryImpl).bind<WriteSyncRepository>()
-    singleOf(::ReadSyncRepositoryImpl).bind<ReadSyncRepository>()
+    singleOf(::WriteSyncRepositoryImpl).bind<WriteSyncRepository>().withOptions { createdAtStart() }
+    singleOf(::ReadSyncRepositoryImpl).bind<ReadSyncRepository>().withOptions { createdAtStart() }
 }

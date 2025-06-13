@@ -44,7 +44,7 @@ internal class WriteSyncRepositoryImpl(
     }
 
     init {
-        Clog.i("ReadStatus.init")
+        Clog.i("WriteSyncRepository.init")
         externalScope.launch {
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
