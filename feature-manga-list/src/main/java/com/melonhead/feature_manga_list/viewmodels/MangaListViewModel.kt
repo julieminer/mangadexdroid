@@ -43,6 +43,9 @@ internal class MangaListViewModel(
     private val mutableShowRatingDialog = MutableLiveData<UIManga?>()
     val showRatingDialog = mutableShowRatingDialog.asLiveData()
 
+    private val mutableShowMangaOptionsModal = MutableLiveData<UIManga?>()
+    val showMangaOptionsModal = mutableShowMangaOptionsModal.asLiveData()
+
     private val mutableRefreshText = MutableLiveData<String>()
     val refreshText = mutableRefreshText.asLiveData()
 
@@ -160,11 +163,26 @@ internal class MangaListViewModel(
 
     fun rateManga(manga: UIManga, rating: Int) {
         mangaRepository.rateManga(manga.id, rating)
+        if (mutableShowMangaOptionsModal.value == manga) {
+            mutableShowMangaOptionsModal.value = manga.copy(rating = rating)
+        }
         mutableShowRatingDialog.value = null
+    }
+
+    fun showRatingModal(manga: UIManga) {
+        mutableShowRatingDialog.value = manga
+    }
+
+    fun showMangaOptionsModal(manga: UIManga) {
+        mutableShowMangaOptionsModal.value = manga
     }
 
     fun dismissRatingModal() {
         mutableShowRatingDialog.value = null
+    }
+
+    fun dismissMangaOptionsModal() {
+        mutableShowMangaOptionsModal.value = null
     }
 
     fun viewMangaOnWeb(context: Context, manga: UIManga) {

@@ -186,6 +186,8 @@ internal class WriteSyncRepositoryImpl(
 
     private suspend fun changeRating(mangaId: String, rating: Int): Boolean {
         if (!context.isNetworkAvailable()) return false
+        val manga = mangaDb.getMangaById(mangaId) ?: return false
+        mangaDb.update(manga.copy(rating = rating))
         return ratingService.setRating(mangaId, rating)
     }
 

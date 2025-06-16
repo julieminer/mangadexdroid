@@ -66,19 +66,21 @@ internal fun MangaListScreen(
     MangaRatingDialog(
         showRatingDialog,
         onRatingChanged = { manga, rating -> viewModel.rateManga(manga, rating) },
-        onDismissed = { viewModel.dismissRatingModal() }
+        onDismissed = {
+            viewModel.dismissRatingModal()
+        }
     )
 
-    var showMangaModal by remember { mutableStateOf<UIManga?>(null) }
-
+    val showMangaModal by viewModel.showMangaOptionsModal.observeAsState()
     MangaOptionsDialog(
         manga = showMangaModal,
         onChangeTitle = { manga, title -> viewModel.setMangaTitle(manga, title) },
         onToggleRendering = { manga, renderingValue -> viewModel.toggleMangaWebview(manga, renderingValue) },
         onClearCache = { manga -> viewModel.clearCache(manga) },
         onViewWebTapped = { manga -> viewModel.viewMangaOnWeb(context, manga) },
+        onChangeRatingTapped = { manga -> viewModel.showRatingModal(manga) },
     ) {
-        showMangaModal = null
+        viewModel.dismissMangaOptionsModal()
     }
 
     val isRefreshing = rememberSwipeRefreshState(isRefreshing = false)
@@ -193,7 +195,7 @@ internal fun MangaListScreen(
                             MangaCoverListItem(
                                 modifier = Modifier.padding(top = if (itemState.first() == item) 0.dp else 12.dp),
                                 uiManga = item,
-                                onTapped = { manga -> showMangaModal = manga }
+                                onTapped = { manga -> viewModel.showMangaOptionsModal(manga) }
                             )
                         }
                         if (item is Pair<*, *> && item.first is UIChapter) {

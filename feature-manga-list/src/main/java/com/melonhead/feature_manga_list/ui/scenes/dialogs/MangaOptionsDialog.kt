@@ -29,6 +29,7 @@ internal fun MangaOptionsDialog(
     onToggleRendering: (UIManga, Boolean) -> Unit,
     onClearCache: (UIManga) -> Unit,
     onViewWebTapped: (UIManga) -> Unit,
+    onChangeRatingTapped: (UIManga) -> Unit,
     onDismissed: () -> Unit,
 ) {
     if (manga != null) {
@@ -53,6 +54,7 @@ internal fun MangaOptionsDialog(
                 onChangeTitle = { showTitleChangeDialogForManga = true },
                 onToggleRendering = { onToggleRendering(manga, it) },
                 onViewWebTapped = { onViewWebTapped(manga) },
+                onChangeRatingTapped = { onChangeRatingTapped(manga) },
                 onClearCache = {
                     onClearCache(manga)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -75,6 +77,7 @@ private fun MangaOptionsDialogContent(
     onChangeTitle: () -> Unit,
     onToggleRendering: (Boolean) -> Unit,
     onViewWebTapped: () -> Unit,
+    onChangeRatingTapped: () -> Unit,
     onClearCache: () -> Unit,
 ) {
     var usesWebView by remember { mutableStateOf(usesWebView) }
@@ -96,16 +99,23 @@ private fun MangaOptionsDialogContent(
         ) {
             Row(
                 Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = mangaTitle, fontWeight = FontWeight.Medium, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text(text = mangaTitle, fontWeight = FontWeight.Medium, fontSize = 18.sp)
 
-                if (mangaRating == null) {
-                    Icon(Icons.Outlined.Star, contentDescription = null)
-                } else {
-                    Text("$mangaRating", fontWeight = FontWeight.Medium, fontSize = 18.sp)
-                    Icon(Icons.Filled.Star, contentDescription = null)
+                Row(
+                    Modifier.clickable { onChangeRatingTapped() }.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (mangaRating == null) {
+                        Icon(Icons.Outlined.Star, contentDescription = null)
+                    } else {
+                        Text("$mangaRating", fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                        Icon(Icons.Filled.Star, contentDescription = null)
+                    }
                 }
-
             }
             if (mangaDesc != null) {
                 Text(text = mangaDesc, fontWeight = FontWeight.Light, fontSize = 14.sp)
@@ -120,7 +130,6 @@ private fun MangaOptionsDialogContent(
         )
 
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // TODO: Add ability to rate manga
             // TODO: add ability to change reading status
 
             Row(
@@ -159,6 +168,6 @@ private fun MangaOptionsDialogContent(
 @Preview(showBackground = true, showSystemUi = true)
 private fun MangaOptionsDialogPreview() {
     MangadexFollowerTheme {
-        MangaOptionsDialog(Previews.previewUIManga(), { _, _ -> }, { _, _ -> }, {}, {}, {})
+        MangaOptionsDialog(Previews.previewUIManga(), { _, _ -> }, { _, _ -> }, {}, {}, {}, {})
     }
 }
