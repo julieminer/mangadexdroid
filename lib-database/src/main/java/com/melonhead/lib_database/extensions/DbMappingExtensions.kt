@@ -18,7 +18,7 @@ fun ChapterEntity.Companion.from(chapter: Chapter): ChapterEntity {
     )
 }
 
-fun MangaEntity.Companion.from(manga: Manga, chosenTitle: String?): MangaEntity {
+fun MangaEntity.Companion.from(manga: Manga, chosenTitle: String?, rating: Int?): MangaEntity {
     val titles = manga.attributes.getEnglishTitles()
     return MangaEntity(
         id = manga.id,
@@ -33,5 +33,6 @@ fun MangaEntity.Companion.from(manga: Manga, chosenTitle: String?): MangaEntity 
         contentRating = manga.attributes.contentRating,
         lastChapter = manga.attributes.lastChapter,
         description = manga.attributes.getEnglishDescription(),
+        rating = rating,
     )
 }

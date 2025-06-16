@@ -2,6 +2,7 @@ package com.melonhead.lib_sync_queue
 
 import android.content.Context
 import com.melonhead.data_manga.services.MangaService
+import com.melonhead.data_rating.services.RatingService
 import com.melonhead.data_shared.models.ui.MangaRefreshStatus
 import com.melonhead.data_user.services.UserService
 import com.melonhead.lib_app_data.AppData
@@ -41,6 +42,7 @@ internal class ReadSyncRepositoryImpl(
     private val appData: AppData,
     private val userService: UserService,
     private val mangaService: MangaService,
+    private val ratingService: RatingService,
 
     private val mangaDb: MangaDao,
     private val chapterDb: ChapterDao,
@@ -131,11 +133,13 @@ internal class ReadSyncRepositoryImpl(
             mutableRefreshStatus.value = MangaRefreshStatus.MangaSeries
 
             val mangaSeries = mangaService.getManga(mangaIdsFromChapters.toList())
+            val ratings = ratingService.getRatings(mangaIdsFromChapters.toList())
+
             val manga = mangaSeries.map {
-                // TODO: grab rating and reading status
+                // TODO: grab reading status
 
                 // grab the chosen title from the DB
-                MangaEntity.from(it, mangaDb.getMangaByIdAsync(it.id).first()?.chosenTitle)
+                MangaEntity.from(it, mangaDb.getMangaByIdAsync(it.id).first()?.chosenTitle, ratings[it.id])
             }
 
             // insert new series into local db
