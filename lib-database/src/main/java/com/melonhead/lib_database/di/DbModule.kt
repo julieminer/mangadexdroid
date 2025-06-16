@@ -39,6 +39,7 @@ val LibDbModule = module {
             MangaDBMigrations.MIGRATION_4_5,
             MangaDBMigrations.MIGRATION_5_6,
             MangaDBMigrations.MIGRATION_6_7,
+            MangaDBMigrations.MIGRATION_7_8,
         ).build()
     }
 
