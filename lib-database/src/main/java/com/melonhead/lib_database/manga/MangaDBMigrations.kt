@@ -42,7 +42,7 @@ internal object MangaDBMigrations {
 
     val MIGRATION_7_8 = object : Migration(7, 8) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE ${MangaDao.TABLE_NAME} ADD COLUMN rating TEXT")
+            db.execSQL("ALTER TABLE ${MangaDao.TABLE_NAME} ADD COLUMN rating INTEGER")
         }
     }
 }
