@@ -1,6 +1,7 @@
 package com.melonhead.data_rating.services
 
 import com.melonhead.data_rating.models.RatingChangeRequest
+import com.melonhead.data_rating.models.RatingResult
 import com.melonhead.data_rating.models.RatingResults
 import com.melonhead.data_rating.routes.HttpRoutes
 import com.melonhead.data_rating.routes.HttpRoutes.ID_PLACEHOLDER
@@ -25,7 +26,7 @@ internal class RatingServiceImpl(
     override suspend fun getRatings(mangaIds: List<String>): Map<String, Int> {
         val session = appData.getSession() ?: return emptyMap()
         Clog.i("getRatings: manga list: $mangaIds")
-        val result = client.catching<Map<String, RatingResults>>("getRatings") {
+        val result = client.catching<RatingResults>("getRatings") {
             client.get(HttpRoutes.RATING_URL) {
                 headers {
                     contentType(ContentType.Application.Json)
@@ -38,9 +39,7 @@ internal class RatingServiceImpl(
                 }
             }
         }
-        return result?.map {
-            it.key to it.value.rating
-        }?.toMap() ?: emptyMap()
+        return result?.ratings?.map { it.key to it.value.rating }?.toMap() ?: emptyMap()
     }
 
     override suspend fun setRating(mangaId: String, ratingNumber: Int): Boolean {
