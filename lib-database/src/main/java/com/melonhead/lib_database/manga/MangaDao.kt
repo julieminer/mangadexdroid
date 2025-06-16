@@ -6,23 +6,23 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface MangaDao {
-    @Query("SELECT * FROM manga")
+    @Query("SELECT * FROM $TABLE_NAME")
     fun getAll(): Flow<List<MangaEntity>>
 
-    @Query("SELECT * from manga")
+    @Query("SELECT * from $TABLE_NAME")
     suspend fun getAllSync(): List<MangaEntity>
 
     fun allSeries() = getAll().distinctUntilChanged()
 
-    @Query("SELECT * FROM manga WHERE id IS :mangaId")
+    @Query("SELECT * FROM $TABLE_NAME WHERE id IS :mangaId")
     fun getMangaByIdAsync(mangaId: String): Flow<MangaEntity?>
 
     fun mangaByIdAsyncDistinct(mangaId: String) = getMangaByIdAsync(mangaId).distinctUntilChanged()
 
-    @Query("SELECT * FROM manga WHERE id IS :mangaId")
+    @Query("SELECT * FROM $TABLE_NAME WHERE id IS :mangaId")
     fun getMangaById(mangaId: String): MangaEntity?
 
-    @Query("SELECT EXISTS(SELECT * FROM manga WHERE id = :mangaId)")
+    @Query("SELECT EXISTS(SELECT * FROM $TABLE_NAME WHERE id = :mangaId)")
     suspend fun containsManga(mangaId: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -33,4 +33,8 @@ interface MangaDao {
 
     @Update
     suspend fun update(manga: MangaEntity)
+
+    companion object {
+        const val TABLE_NAME = "manga"
+    }
 }
