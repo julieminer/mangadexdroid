@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +49,7 @@ internal fun MangaOptionsDialog(
                 mangaTitle = manga.title,
                 mangaDesc = manga.description,
                 usesWebView = manga.useWebview,
+                mangaRating = manga.rating,
                 onChangeTitle = { showTitleChangeDialogForManga = true },
                 onToggleRendering = { onToggleRendering(manga, it) },
                 onViewWebTapped = { onViewWebTapped(manga) },
@@ -66,6 +70,7 @@ internal fun MangaOptionsDialog(
 private fun MangaOptionsDialogContent(
     mangaTitle: String,
     mangaDesc: String?,
+    mangaRating: Int?,
     usesWebView: Boolean,
     onChangeTitle: () -> Unit,
     onToggleRendering: (Boolean) -> Unit,
@@ -89,7 +94,19 @@ private fun MangaOptionsDialogContent(
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = mangaTitle, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+            Row(
+                Modifier.fillMaxWidth(),
+            ) {
+                Text(text = mangaTitle, fontWeight = FontWeight.Medium, fontSize = 18.sp, modifier = Modifier.weight(1f))
+
+                if (mangaRating == null) {
+                    Icon(Icons.Outlined.Star, contentDescription = null)
+                } else {
+                    Text("$mangaRating", fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                    Icon(Icons.Filled.Star, contentDescription = null)
+                }
+
+            }
             if (mangaDesc != null) {
                 Text(text = mangaDesc, fontWeight = FontWeight.Light, fontSize = 14.sp)
             }

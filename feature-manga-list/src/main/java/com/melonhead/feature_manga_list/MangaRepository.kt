@@ -109,6 +109,7 @@ internal class MangaRepositoryImpl(
                 contentRating = manga.contentRating,
                 lastChapter = manga.lastChapter,
                 description = manga.description,
+                rating = manga.rating,
             )
         }
         if (uiManga.isEmpty()) return emptyList()
