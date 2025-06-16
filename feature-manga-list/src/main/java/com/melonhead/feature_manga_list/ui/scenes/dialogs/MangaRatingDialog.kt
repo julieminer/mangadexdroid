@@ -38,7 +38,7 @@ internal fun MangaRatingDialog(
     }
 
     if (manga != null) {
-        var selectedRating by remember { mutableStateOf<Int?>(null) }
+        var selectedRating by remember { mutableStateOf(manga.rating) }
 
         AlertDialog(
             onDismissRequest = { onDismissed() },
