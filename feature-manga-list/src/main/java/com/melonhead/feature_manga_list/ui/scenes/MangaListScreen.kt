@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -41,8 +43,10 @@ import com.melonhead.feature_manga_list.ui.scenes.dialogs.ChapterOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaRatingDialog
 import com.melonhead.feature_manga_list.viewmodels.MangaListViewModel
+import com.melonhead.lib_core.extensions.Previews
 import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.lib_core.extensions.networkAvailability
+import com.melonhead.lib_core.theme.MangadexFollowerTheme
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -84,9 +88,6 @@ internal fun MangaListScreen(
         viewModel.dismissMangaOptionsModal()
     }
 
-    val isRefreshing = rememberSwipeRefreshState(isRefreshing = false)
-    var justPulledRefresh by remember { mutableStateOf(false) }
-
     val manga by viewModel.manga.observeAsState(listOf())
     val refreshStatus by viewModel.refreshStatus.observeAsState(MangaRefreshStatus.None)
     val refreshText by viewModel.refreshText.observeAsState("")
@@ -101,119 +102,139 @@ internal fun MangaListScreen(
     if (manga.isEmpty()) {
         LoadingScreen(refreshStatus)
     } else {
-        val itemState = remember(manga, refreshStatus) {
-            val items = mutableListOf<Any>()
-            manga.forEach { manga ->
-                items.add(manga)
-                manga.chapters.filter { it.read != true }.forEach {
-                    items.add(it to manga)
-                }
-                manga.chapters.filter { it.read == true }.take(readMangaCount).forEach {
-                    items.add(it to manga)
-                }
+        MangaList(connected, manga, refreshStatus, refreshText, readMangaCount,
+            showVersionToast = {
+                Toast.makeText(
+                    context,
+                    "Version ${buildVersionName}.${buildVersionCode}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            },
+            refreshCalled = { viewModel.refreshContent() },
+            chapterClicked = { mangaId, chapterId -> viewModel.onChapterClicked(context, mangaId, chapterId) },
+            showChapterOptions = { chapterOptionsDialog = it },
+            showMangaOptions = { viewModel.showMangaOptionsModal(it) },
+        )
+    }
+}
+
+@Composable
+private fun MangaList(
+    connected: Boolean,
+    manga: List<UIManga>,
+    refreshStatus: MangaRefreshStatus,
+    refreshText: String,
+    readMangaCount: Int,
+    showVersionToast: () -> Unit = {},
+    refreshCalled: () -> Unit = {},
+    chapterClicked: (String, String) -> Unit = { _, _ -> },
+    showChapterOptions: (Pair<UIManga, UIChapter>) -> Unit = {},
+    showMangaOptions: (UIManga) -> Unit = {}
+) {
+    val isRefreshing = rememberSwipeRefreshState(isRefreshing = false)
+    var justPulledRefresh by remember { mutableStateOf(false) }
+
+    val itemState = remember(manga, refreshStatus) {
+        val items = mutableListOf<Any>()
+        manga.forEach { manga ->
+            items.add(manga)
+            manga.chapters.filter { it.read != true }.forEach {
+                items.add(it to manga)
             }
-            items.toList()
+            manga.chapters.filter { it.read == true }.take(readMangaCount).forEach {
+                items.add(it to manga)
+            }
         }
-        LaunchedEffect(refreshStatus) { justPulledRefresh = false }
+        items.toList()
+    }
+    LaunchedEffect(refreshStatus) { justPulledRefresh = false }
 
-        Column {
-            AnimatedVisibility(visible = connected && (refreshStatus !is MangaRefreshStatus.None || isRefreshing.isRefreshing || justPulledRefresh)) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceTint)
-                        .padding(8.dp)
-                        .clickable {
-                            Toast
-                                .makeText(
-                                    context,
-                                    "Version ${buildVersionName}.${buildVersionCode}",
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .size(12.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onSecondary
-                    )
-                    Text(
-                        text = refreshStatus.text,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        fontSize = 14.sp
-                    )
-                }
-            }
+    Column {
+        AnimatedVisibility(visible = connected && (refreshStatus !is MangaRefreshStatus.None || isRefreshing.isRefreshing || justPulledRefresh)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceTint)
+                    .padding(8.dp)
+                    .clickable {
+                        showVersionToast()
 
-            SwipeRefresh(
-                state = isRefreshing,
-                onRefresh = {
-                    justPulledRefresh = true
-                    viewModel.refreshContent()
-                },
-                swipeEnabled = connected && (refreshStatus is MangaRefreshStatus.None) && !isRefreshing.isRefreshing && !justPulledRefresh
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
-                    item {
-                        AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing) {
-                            Text(text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .align(Alignment.CenterHorizontally)
-                                    .clickable {
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                "Version ${buildVersionName}.${buildVersionCode}",
-                                                Toast.LENGTH_SHORT
-                                            )
-                                            .show()
-                                    }
-                                    .padding(bottom = 12.dp),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Normal,
-                                textAlign = TextAlign.Center)
-                        }
-                    }
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .size(12.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onSecondary
+                )
+                Text(
+                    text = refreshStatus.text,
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    fontSize = 14.sp
+                )
+            }
+        }
 
-                    items(itemState, {
-                        when {
-                            it is UIManga -> it.id
-                            it is Pair<*, *> && it.first is UIChapter -> (it.first as UIChapter).id
-                            else -> it.hashCode()
-                        }
-                    }) { item ->
-                        if (item is UIManga) {
-                            MangaCoverListItem(
-                                modifier = Modifier.padding(top = if (itemState.first() == item) 0.dp else 12.dp),
-                                uiManga = item,
-                                onTapped = { manga -> viewModel.showMangaOptionsModal(manga) }
-                            )
-                        }
-                        if (item is Pair<*, *> && item.first is UIChapter) {
-                            ChapterListItem(
-                                modifier = Modifier.padding(bottom = 12.dp),
-                                uiChapter = item.first as UIChapter,
-                                uiManga = item.second as UIManga,
-                                refreshStatus = refreshStatus,
-                                connected = connected,
-                                onChapterClicked = { uiManga, uiChapter ->
-                                    viewModel.onChapterClicked(context, uiManga.id, uiChapter.id)
-                                },
-                                onChapterLongPressed = { uiManga, uiChapter ->
-                                    chapterOptionsDialog = uiManga to uiChapter
+        SwipeRefresh(
+            state = isRefreshing,
+            onRefresh = {
+                justPulledRefresh = true
+                refreshCalled()
+            },
+            swipeEnabled = connected && (refreshStatus is MangaRefreshStatus.None) && !isRefreshing.isRefreshing && !justPulledRefresh
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                item {
+                    AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing) {
+                        Text(text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.CenterHorizontally)
+                                .clickable {
+                                    showVersionToast()
                                 }
-                            )
-                        }
+                                .padding(bottom = 12.dp),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Normal,
+                            textAlign = TextAlign.Center)
+                    }
+                }
+
+                items(itemState, {
+                    when {
+                        it is UIManga -> it.id
+                        it is Pair<*, *> && it.first is UIChapter -> (it.first as UIChapter).id
+                        else -> it.hashCode()
+                    }
+                }) { item ->
+                    if (item is UIManga) {
+                        MangaCoverListItem(
+                            modifier = Modifier.padding(top = if (itemState.first() == item) 0.dp else 12.dp),
+                            uiManga = item,
+                            onTapped = { manga -> showMangaOptions(manga) }
+                        )
+                    }
+                    if (item is Pair<*, *> && item.first is UIChapter) {
+                        ChapterListItem(
+                            modifier = Modifier.padding(bottom = 12.dp),
+                            uiChapter = item.first as UIChapter,
+                            uiManga = item.second as UIManga,
+                            refreshStatus = refreshStatus,
+                            connected = connected,
+                            onChapterClicked = { uiManga, uiChapter ->
+                                chapterClicked(uiManga.id, uiChapter.id)
+                            },
+                            onChapterLongPressed = { uiManga, uiChapter ->
+                                showChapterOptions(uiManga to uiChapter)
+                            }
+                        )
                     }
                 }
             }
@@ -228,5 +249,19 @@ internal fun DisconnectedScreen() {
         verticalArrangement = Arrangement.Center
     ) {
         Text(text = "Please connect to the internet to continue", fontSize = 16.sp, modifier = Modifier.padding(vertical = 16.dp))
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun MangaListPreview() {
+    MangadexFollowerTheme {
+        MangaList(
+            connected = true,
+            manga = listOf(Previews.previewUIManga()),
+            refreshStatus = MangaRefreshStatus.None,
+            refreshText = "Testing",
+            readMangaCount = 4,
+        )
     }
 }
