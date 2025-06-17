@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,9 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,8 +48,8 @@ import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaOptionsDialog
 import com.melonhead.feature_manga_list.ui.scenes.dialogs.MangaRatingDialog
 import com.melonhead.feature_manga_list.viewmodels.MangaListViewModel
 import com.melonhead.lib_core.extensions.Previews
-import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.lib_core.extensions.networkAvailability
+import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.lib_core.theme.MangadexFollowerTheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -114,6 +118,7 @@ internal fun MangaListScreen(
             chapterClicked = { mangaId, chapterId -> viewModel.onChapterClicked(context, mangaId, chapterId) },
             showChapterOptions = { chapterOptionsDialog = it },
             showMangaOptions = { viewModel.showMangaOptionsModal(it) },
+            onSettingsTapped = onSettingsTapped,
         )
     }
 }
@@ -125,6 +130,7 @@ private fun MangaList(
     refreshStatus: MangaRefreshStatus,
     refreshText: String,
     readMangaCount: Int,
+    onSettingsTapped: () -> Unit = {},
     showVersionToast: () -> Unit = {},
     refreshCalled: () -> Unit = {},
     chapterClicked: (String, String) -> Unit = { _, _ -> },
@@ -151,30 +157,36 @@ private fun MangaList(
 
     Column {
         AnimatedVisibility(visible = connected && (refreshStatus !is MangaRefreshStatus.None || isRefreshing.isRefreshing || justPulledRefresh)) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceTint)
-                    .padding(8.dp)
-                    .clickable {
-                        showVersionToast()
+            Box {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceTint)
+                        .padding(8.dp)
+                        .clickable { showVersionToast() },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .size(12.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                    Text(
+                        text = refreshStatus.text,
+                        color = MaterialTheme.colorScheme.onSecondary,
+                        fontSize = 14.sp
+                    )
+                }
 
-                    },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .size(12.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
-                Text(
-                    text = refreshStatus.text,
-                    color = MaterialTheme.colorScheme.onSecondary,
-                    fontSize = 14.sp
-                )
+                IconButton(
+                    modifier = Modifier.padding(top = 8.dp, end = 8.dp).size(24.dp).align(Alignment.TopEnd),
+                    onClick = onSettingsTapped
+                ) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSecondary)
+                }
             }
         }
 
@@ -192,18 +204,27 @@ private fun MangaList(
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 item {
-                    AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing) {
-                        Text(text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.CenterHorizontally)
-                                .clickable {
-                                    showVersionToast()
-                                }
-                                .padding(bottom = 12.dp),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Normal,
-                            textAlign = TextAlign.Center)
+                    AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing && !justPulledRefresh) {
+                        Box {
+                            IconButton(
+                                modifier = Modifier.size(24.dp).align(Alignment.TopEnd),
+                                onClick = onSettingsTapped
+                            ) {
+                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                            }
+
+                            Text(text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.Center)
+                                    .clickable {
+                                        showVersionToast()
+                                    }
+                                    .padding(bottom = 12.dp),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Normal,
+                                textAlign = TextAlign.Center)
+                        }
                     }
                 }
 
@@ -260,6 +281,20 @@ private fun MangaListPreview() {
             connected = true,
             manga = listOf(Previews.previewUIManga()),
             refreshStatus = MangaRefreshStatus.None,
+            refreshText = "Testing",
+            readMangaCount = 4,
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun MangaListRefreshingPreview() {
+    MangadexFollowerTheme {
+        MangaList(
+            connected = true,
+            manga = listOf(Previews.previewUIManga()),
+            refreshStatus = MangaRefreshStatus.MangaSeries,
             refreshText = "Testing",
             readMangaCount = 4,
         )
