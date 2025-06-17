@@ -3,6 +3,7 @@ package com.melonhead.mangadexfollower.di
 import com.melonhead.feature_authentication.di.FeatureAuthenticationModule
 import com.melonhead.feature_manga_list.di.FeatureMangaListModule
 import com.melonhead.feature_native_chapter_viewer.di.FeatureNativeChapterViewerModule
+import com.melonhead.feature_settings.di.FeatureSettingsModule
 import com.melonhead.feature_webview_chapter_viewer.di.FeatureWebViewChapterViewerModule
 import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_data.di.LibAppDataModule
@@ -34,6 +35,7 @@ val AppModule = module {
     includes(FeatureMangaListModule)
     includes(FeatureNativeChapterViewerModule)
     includes(FeatureWebViewChapterViewerModule)
+    includes(FeatureSettingsModule)
 
     viewModelOf(::MainViewModel)
 
