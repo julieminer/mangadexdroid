@@ -4,6 +4,7 @@ import androidx.room.Room
 import com.melonhead.lib_database.chapter.ChapterDBMigrations
 import com.melonhead.lib_database.chapter.ChapterDatabase
 import com.melonhead.lib_database.manga.MangaDBMigrations
+import com.melonhead.lib_database.manga.MangaDao
 import com.melonhead.lib_database.manga.MangaDatabase
 import com.melonhead.lib_database.readmarkers.ReadMarkerDatabase
 import com.melonhead.lib_database.sync_queue.SyncQueueDao
@@ -30,7 +31,7 @@ val LibDbModule = module {
     single(createdAtStart = true) {
         Room.databaseBuilder(
             get(),
-            MangaDatabase::class.java, "manga"
+            MangaDatabase::class.java, MangaDao.TABLE_NAME
         ).addMigrations(
             MangaDBMigrations.MIGRATION_1_2,
             MangaDBMigrations.MIGRATION_2_3,
@@ -38,6 +39,7 @@ val LibDbModule = module {
             MangaDBMigrations.MIGRATION_4_5,
             MangaDBMigrations.MIGRATION_5_6,
             MangaDBMigrations.MIGRATION_6_7,
+            MangaDBMigrations.MIGRATION_7_8,
         ).build()
     }
 

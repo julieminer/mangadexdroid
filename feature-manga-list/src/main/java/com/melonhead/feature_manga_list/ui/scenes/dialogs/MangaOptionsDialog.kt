@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +29,7 @@ internal fun MangaOptionsDialog(
     onToggleRendering: (UIManga, Boolean) -> Unit,
     onClearCache: (UIManga) -> Unit,
     onViewWebTapped: (UIManga) -> Unit,
+    onChangeRatingTapped: (UIManga) -> Unit,
     onDismissed: () -> Unit,
 ) {
     if (manga != null) {
@@ -46,9 +50,11 @@ internal fun MangaOptionsDialog(
                 mangaTitle = manga.title,
                 mangaDesc = manga.description,
                 usesWebView = manga.useWebview,
+                mangaRating = manga.rating,
                 onChangeTitle = { showTitleChangeDialogForManga = true },
                 onToggleRendering = { onToggleRendering(manga, it) },
                 onViewWebTapped = { onViewWebTapped(manga) },
+                onChangeRatingTapped = { onChangeRatingTapped(manga) },
                 onClearCache = {
                     onClearCache(manga)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -66,10 +72,12 @@ internal fun MangaOptionsDialog(
 private fun MangaOptionsDialogContent(
     mangaTitle: String,
     mangaDesc: String?,
+    mangaRating: Int?,
     usesWebView: Boolean,
     onChangeTitle: () -> Unit,
     onToggleRendering: (Boolean) -> Unit,
     onViewWebTapped: () -> Unit,
+    onChangeRatingTapped: () -> Unit,
     onClearCache: () -> Unit,
 ) {
     var usesWebView by remember { mutableStateOf(usesWebView) }
@@ -89,7 +97,26 @@ private fun MangaOptionsDialogContent(
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = mangaTitle, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = mangaTitle, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+
+                Row(
+                    Modifier.clickable { onChangeRatingTapped() }.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (mangaRating == null) {
+                        Icon(Icons.Outlined.Star, contentDescription = null)
+                    } else {
+                        Text("$mangaRating", fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                        Icon(Icons.Filled.Star, contentDescription = null)
+                    }
+                }
+            }
             if (mangaDesc != null) {
                 Text(text = mangaDesc, fontWeight = FontWeight.Light, fontSize = 14.sp)
             }
@@ -103,7 +130,6 @@ private fun MangaOptionsDialogContent(
         )
 
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // TODO: Add ability to rate manga
             // TODO: add ability to change reading status
 
             Row(
@@ -142,6 +168,6 @@ private fun MangaOptionsDialogContent(
 @Preview(showBackground = true, showSystemUi = true)
 private fun MangaOptionsDialogPreview() {
     MangadexFollowerTheme {
-        MangaOptionsDialog(Previews.previewUIManga(), { _, _ -> }, { _, _ -> }, {}, {}, {})
+        MangaOptionsDialog(Previews.previewUIManga(), { _, _ -> }, { _, _ -> }, {}, {}, {}, {})
     }
 }

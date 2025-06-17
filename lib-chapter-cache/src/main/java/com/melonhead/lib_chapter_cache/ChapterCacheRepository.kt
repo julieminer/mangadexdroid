@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -61,7 +62,7 @@ internal class ChapterCacheRepositoryImpl(
     private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
 
-    private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(500L, externalScope) { pair ->
+    private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(1000L, externalScope) { pair ->
         externalScope.launch { updateChapterCache(pair.first, pair.second) }
     }
 
@@ -100,6 +101,7 @@ internal class ChapterCacheRepositoryImpl(
 
                             is UserEvent.RefreshManga -> {
                                 launch {
+                                    event.completionJob?.await()
                                     updateChapterCacheThrottled(mangaDb.getAllSync() to chapterDb.getAllSync())
                                 }
                             }
@@ -197,6 +199,7 @@ internal class ChapterCacheRepositoryImpl(
         val cacheDirectory = appContext.cacheDir
         for (chapter in chapters) {
             mutableCachingStatus.value = CachingStatus.Caching(chapter.id)
+            if (readStatusRepository.isRead(chapter)) continue
             val mangaForChapter = manga.find { it.id == chapter.mangaId } ?: continue
             if (mangaForChapter.useWebview) continue
             val mangaDirectory = File(cacheDirectory, mangaForChapter.id)
