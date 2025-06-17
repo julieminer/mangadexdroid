@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace 'com.melonhead.feature_webview_chapter_viewer'
+    namespace 'com.melonhead.feature_settings'
 }
 
 dependencies {
