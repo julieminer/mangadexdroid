@@ -17,4 +17,5 @@ sealed class ActivityKey {
             const val PARAM_CHAPTER_DATA = "chapter_data"
         }
     }
+    data object SettingsActivity : ActivityKey()
 }
