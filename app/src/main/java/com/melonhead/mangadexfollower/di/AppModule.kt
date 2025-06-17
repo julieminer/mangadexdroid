@@ -15,7 +15,6 @@ import com.melonhead.lib_sync_queue.di.LibWriteSyncRepositoryModule
 import com.melonhead.mangadexfollower.AppNavigationMap
 import com.melonhead.mangadexfollower.navigation.MainActivityResolver
 import com.melonhead.mangadexfollower.ui.viewmodels.MainViewModel
-import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.module.dsl.createdAtStart
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
