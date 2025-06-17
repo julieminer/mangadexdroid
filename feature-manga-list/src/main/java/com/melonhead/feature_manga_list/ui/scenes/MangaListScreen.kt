@@ -50,6 +50,7 @@ internal fun MangaListScreen(
     viewModel: MangaListViewModel = koinViewModel(),
     buildVersionName: String,
     buildVersionCode: String,
+    onSettingsTapped: () -> Unit,
 ) {
     val context = LocalContext.current
     var chapterOptionsDialog by remember { mutableStateOf<Pair<UIManga, UIChapter>?>(null) }

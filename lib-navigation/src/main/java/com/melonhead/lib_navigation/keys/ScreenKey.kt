@@ -15,5 +15,6 @@ sealed class ScreenKey {
     data class MangaListScreen(
         val buildVersionName: String,
         val buildVersionCode: String,
+        val onSettingsTapped: () -> Unit,
     ) : ScreenKey()
 }
