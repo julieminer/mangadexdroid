@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,11 +50,13 @@ internal class ChapterActivity: ComponentActivity() {
                         },
                     )
                 } else {
+                    val chapterTapAreaSize by viewModel.chapterTapAreaSize.collectAsState()
+
                     ChapterScreen(
                         description = manga.description,
                         currentPage = page,
                         allPages = pages,
-                        chapterTapAreaSize = viewModel.chapterTapAreaSize,
+                        chapterTapAreaSize = chapterTapAreaSize,
                         onCompletedChapter = {
                             viewModel.markAsRead()
                             finish()

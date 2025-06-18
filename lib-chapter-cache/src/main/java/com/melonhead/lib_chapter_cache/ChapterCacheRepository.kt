@@ -144,7 +144,7 @@ internal class ChapterCacheRepositoryImpl(
 
     private suspend fun getChapterData(chapterId: String): List<String>? {
         val chapterData = atHomeService.getChapterData(chapterId)
-        return if (appData.useDataSaver) {
+        return if (appData.useDataSaver.getValue()) {
             chapterData?.pagesDataSaver()
         } else {
             chapterData?.pages()

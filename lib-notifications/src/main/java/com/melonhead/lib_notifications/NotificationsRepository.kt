@@ -90,7 +90,7 @@ internal class NotificationsRepositoryImpl(
         if (appContext.isInForeground) return
         val notificationManager = NotificationManagerCompat.from(context)
         if (!notificationManager.areNotificationsEnabled()) return
-        val installDateSeconds = appData.installDateSeconds.firstOrNull() ?: 0L
+        val installDateSeconds = appData.installDateSeconds.getValue()
         val newChapters = chapters
             .filter { !readStatusRepository.isRead(it) }
             .filter { !it.blockedChapter }

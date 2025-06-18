@@ -1,10 +1,16 @@
 package com.melonhead.lib_app_data
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.melonhead.lib_app_data.models.RenderStyle
@@ -16,150 +22,131 @@ import kotlinx.datetime.Clock
 
 interface AppData {
     val token: Flow<Pair<String, String>?>
-    val installDateSeconds: Flow<Long?>
-    val lastRefreshDateSeconds: Flow<Long?>
-    val autoMarkMangaCompleted: Flow<Boolean>
-    val autoMarkMangaReading: Flow<Boolean>
+    val installDateSeconds: PreferenceValue<Long>
+    val lastRefreshDateSeconds: PreferenceValue<Long>
+    val autoMarkMangaCompleted: PreferenceValue<Boolean>
+    val autoMarkMangaReading: PreferenceValue<Boolean>
 
-    val renderStyle: RenderStyle
-    val useDataSaver: Boolean
-    val chapterTapAreaSize: Dp
-    val showReadChapterCount: Int
+    val renderStyle: PreferenceValueMapper<RenderStyle, String>
+    val useDataSaver: PreferenceValue<Boolean>
+    val chapterTapAreaSize: PreferenceValueMapper<Dp, Int>
+    val showReadChapterCount: PreferenceValue<Int>
 
     suspend fun updateToken(session: String?, refresh: String?)
     suspend fun updateClient(email: String?, apiClient: String?, apiSecret: String?)
     suspend fun updateInstallTime()
     suspend fun updateLastRefreshDate()
-    suspend fun updateRenderStyle(renderStyle: RenderStyle)
-    suspend fun updateAutoMarkMangaCompleted(autoMarkMangaCompleted: Boolean)
-    suspend fun updateAutoMarkMangaReading(autoMarkMangaReading: Boolean)
-    suspend fun setUseDataSaver(useDataSaver: Boolean)
-    suspend fun setShowReadChapterCount(readChapterCount: Int)
     suspend fun getToken(): Pair<String, String>?
     suspend fun getSession(): String?
     suspend fun getRefresh(): String?
     suspend fun getClient(): Triple<String, String, String>?
 }
 
+class PreferenceValue<T>(
+    private val dataStore: DataStore<Preferences>,
+    private val preferenceKey: Preferences.Key<T>,
+    internal val defaultValue: T,
+) {
+    val flow = dataStore.data.map { preferences ->
+        preferences[preferenceKey] ?: defaultValue
+    }.distinctUntilChanged()
+
+    suspend fun setValue(value: T?) {
+        dataStore.edit { settings ->
+            if (value == null) {
+                settings.remove(preferenceKey)
+            } else {
+                settings[preferenceKey] = value
+            }
+        }
+    }
+
+    suspend fun getValue(): T {
+        return flow.firstOrNull() ?: defaultValue
+    }
+
+    @Composable
+    fun collectAsState(): State<T> {
+        return flow.collectAsState(initial = defaultValue)
+    }
+}
+
 internal class AppDataImpl(
-    private val appContext: Context,
+    appContext: Context,
 ): AppData {
-    private val CLIENT_ID = stringPreferencesKey("client_id")
-    private val CLIENT_SECRET = stringPreferencesKey("client_secret")
-    private val CLIENT_EMAIL = stringPreferencesKey("client_email")
-    private val AUTH_TOKEN = stringPreferencesKey("auth_token")
-    private val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
-    private val INSTALL_DATE = longPreferencesKey("install_date")
-    private val REFRESH_TIME = longPreferencesKey("refresh_time")
-    private val AUTO_MARK_MANGA_COMPLETED = booleanPreferencesKey("auto_mark_manga_completed")
-    private val AUTO_MARK_MANGA_READING = booleanPreferencesKey("auto_mark_manga_reading")
+    private val dataStore = appContext.dataStore
 
     private val tokenMutex = Mutex()
     private val clientMutex = Mutex()
 
-    private val clientEmail: Flow<String> = appContext.dataStore.data.map { preferences ->
-        preferences[CLIENT_EMAIL] ?: ""
-    }.distinctUntilChanged()
+    private val clientEmail = PreferenceValue(dataStore, stringPreferencesKey("client_email"), defaultValue = "")
+    private val clientId = PreferenceValue(dataStore, stringPreferencesKey("client_id"), defaultValue = "")
+    private val clientSecret = PreferenceValue(dataStore, stringPreferencesKey("client_secret"), defaultValue = "")
 
-    private val clientId: Flow<String> = appContext.dataStore.data.map { preferences ->
-        preferences[CLIENT_ID] ?: ""
-    }.distinctUntilChanged()
+    private val authToken = PreferenceValue(dataStore, stringPreferencesKey("auth_token"), defaultValue = "")
+    private val refreshToken = PreferenceValue(dataStore, stringPreferencesKey("refresh_token"), defaultValue = "")
 
-    private val clientSecret: Flow<String> = appContext.dataStore.data.map { preferences ->
-        preferences[CLIENT_SECRET] ?: ""
-    }.distinctUntilChanged()
+    override val installDateSeconds = PreferenceValue(dataStore, longPreferencesKey("install_date"), defaultValue = 0L)
+    override val lastRefreshDateSeconds = PreferenceValue(dataStore, longPreferencesKey("refresh_time"), defaultValue = 0L)
 
-    private val authTokenFlow: Flow<String> = appContext.dataStore.data.map { preferences ->
-        // No type safety.
-        preferences[AUTH_TOKEN] ?: ""
-    }.distinctUntilChanged()
+    override val autoMarkMangaCompleted = PreferenceValue(dataStore, booleanPreferencesKey("auto_mark_manga_completed"), defaultValue = true)
+    override val autoMarkMangaReading = PreferenceValue(dataStore, booleanPreferencesKey("auto_mark_manga_reading"), defaultValue = true)
 
-    private val refreshTokenFlow: Flow<String> = appContext.dataStore.data.map { preferences ->
-        // No type safety.
-        preferences[REFRESH_TOKEN] ?: ""
-    }.distinctUntilChanged()
-
-    override val installDateSeconds: Flow<Long?> = appContext.dataStore.data.map { preferences ->
-        preferences[INSTALL_DATE] ?: 0L
-    }.distinctUntilChanged()
-
-    override val lastRefreshDateSeconds: Flow<Long?> = appContext.dataStore.data.map { preferences ->
-        preferences[REFRESH_TIME]
-    }.distinctUntilChanged()
-
-    override val autoMarkMangaCompleted: Flow<Boolean> = appContext.dataStore.data.map { preferences ->
-        preferences[AUTO_MARK_MANGA_COMPLETED] ?: true
-    }.distinctUntilChanged()
-
-    override val autoMarkMangaReading: Flow<Boolean> = appContext.dataStore.data.map { preferences ->
-        preferences[AUTO_MARK_MANGA_READING] ?: true
-    }.distinctUntilChanged()
-
-    override var token: Flow<Pair<String, String>?> = authTokenFlow.combine(refreshTokenFlow) { auth, refresh ->
-        if (auth.isBlank() || refresh.isBlank()) return@combine null
+    override var token: Flow<Pair<String, String>?> = authToken.flow.combine(refreshToken.flow) { auth, refresh ->
+        if (auth.isNullOrBlank() || refresh.isNullOrBlank()) return@combine null
         auth to refresh
     }.distinctUntilChanged()
 
-    override val renderStyle: RenderStyle
-        get() = RenderStyle.Native
+    override val renderStyle = PreferenceValueMapper(
+        PreferenceValue(dataStore, stringPreferencesKey("render_style"), defaultValue = ""),
+        object: PreferenceValueMapping<RenderStyle, String> {
+            override fun toValue(arg: RenderStyle): String {
+                return arg.toString()
+            }
 
-    override val useDataSaver: Boolean
-        get() = false
+            override fun fromValue(arg: String): RenderStyle {
+                return RenderStyle.fromString(arg) ?: RenderStyle.Native
+            }
+        }
+    )
+    override val useDataSaver = PreferenceValue(dataStore, booleanPreferencesKey("data_saver"), defaultValue = false)
 
-    override val chapterTapAreaSize: Dp
-        get() = 60.dp
+    override val chapterTapAreaSize = PreferenceValueMapper(
+        PreferenceValue(dataStore, intPreferencesKey("chapter_tap_area_size"), defaultValue = 60),
+        object: PreferenceValueMapping<Dp, Int> {
+            override fun toValue(arg: Dp): Int {
+                return arg.value.toInt()
+            }
 
-    override val showReadChapterCount: Int
-        get() = 1
+            override fun fromValue(arg: Int): Dp {
+                return arg.dp
+            }
+        }
+    )
+
+    override val showReadChapterCount = PreferenceValue(dataStore, intPreferencesKey("show_read_chapter_count"), defaultValue = 1)
 
     override suspend fun updateClient(email: String?, apiClient: String?, apiSecret: String?) {
         clientMutex.withLock {
-            appContext.dataStore.edit { settings ->
-                if (settings[CLIENT_EMAIL] != email)
-                    settings[CLIENT_EMAIL] = email ?: ""
-
-                if (settings[CLIENT_ID] != apiClient)
-                    settings[CLIENT_ID] = apiClient ?: ""
-
-                if (settings[CLIENT_SECRET] != apiSecret)
-                    settings[CLIENT_SECRET] = apiSecret ?: ""
-            }
+            clientEmail.setValue(email ?: "")
+            clientId.setValue(apiClient ?: "")
+            clientSecret.setValue(apiSecret ?: "")
         }
     }
 
     override suspend fun updateToken(session: String?, refresh: String?) {
         tokenMutex.withLock {
-            appContext.dataStore.edit { settings ->
-                if (settings[AUTH_TOKEN] != session)
-                    settings[AUTH_TOKEN] = session ?: ""
-
-                if (settings[REFRESH_TOKEN] != refresh)
-                    settings[REFRESH_TOKEN] = refresh ?: ""
-            }
+            authToken.setValue(session ?: "")
+            refreshToken.setValue(refresh ?: "")
         }
     }
 
     override suspend fun updateInstallTime() {
-        appContext.dataStore.edit { settings ->
-            settings[INSTALL_DATE] = Clock.System.now().epochSeconds
-        }
+        installDateSeconds.setValue(Clock.System.now().epochSeconds)
     }
+
     override suspend fun updateLastRefreshDate() {
-        appContext.dataStore.edit { settings ->
-            settings[REFRESH_TIME] = Clock.System.now().epochSeconds
-        }
-    }
-
-    override suspend fun updateAutoMarkMangaCompleted(autoMarkMangaCompleted: Boolean) {
-        appContext.dataStore.edit { settings ->
-            settings[AUTO_MARK_MANGA_COMPLETED] = autoMarkMangaCompleted
-        }
-    }
-
-    override suspend fun updateAutoMarkMangaReading(autoMarkMangaReading: Boolean) {
-        appContext.dataStore.edit { settings ->
-            settings[AUTO_MARK_MANGA_READING] = autoMarkMangaReading
-        }
+        lastRefreshDateSeconds.setValue(Clock.System.now().epochSeconds)
     }
 
     override suspend fun getToken(): Pair<String, String>? {
@@ -182,22 +169,10 @@ internal class AppDataImpl(
 
     override suspend fun getClient(): Triple<String, String, String>? {
         clientMutex.withLock {
-            val email = clientEmail.firstOrNull() ?: return null
-            val id = clientId.firstOrNull() ?: return null
-            val secret = clientSecret.firstOrNull() ?: return null
+            val email = clientEmail.getValue() ?: return null
+            val id = clientId.getValue() ?: return null
+            val secret = clientSecret.getValue() ?: return null
             return Triple(email, id, secret)
         }
-    }
-
-    override suspend fun updateRenderStyle(renderStyle: RenderStyle) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun setUseDataSaver(useDataSaver: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun setShowReadChapterCount(readChapterCount: Int) {
-        TODO("Not yet implemented")
     }
 }

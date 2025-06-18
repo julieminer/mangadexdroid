@@ -95,7 +95,7 @@ internal fun MangaListScreen(
     val manga by viewModel.manga.observeAsState(listOf())
     val refreshStatus by viewModel.refreshStatus.observeAsState(MangaRefreshStatus.None)
     val refreshText by viewModel.refreshText.observeAsState("")
-    val readMangaCount = viewModel.readMangaCount
+    val readMangaCount by viewModel.readMangaCount.collectAsState()
     val connected by context.networkAvailability().collectAsState(true)
 
     if (!connected && manga.isEmpty()) {
