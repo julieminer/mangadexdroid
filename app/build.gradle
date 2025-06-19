@@ -62,4 +62,5 @@ dependencies {
     implementation project(':feature-manga-list')
     implementation project(':feature-native-chapter-viewer')
     implementation project(':feature-webview-chapter-viewer')
+    implementation project(':feature-settings')
 }

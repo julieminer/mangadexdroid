@@ -3,6 +3,7 @@ package com.melonhead.mangadexfollower.di
 import com.melonhead.feature_authentication.di.FeatureAuthenticationModule
 import com.melonhead.feature_manga_list.di.FeatureMangaListModule
 import com.melonhead.feature_native_chapter_viewer.di.FeatureNativeChapterViewerModule
+import com.melonhead.feature_settings.di.FeatureSettingsModule
 import com.melonhead.feature_webview_chapter_viewer.di.FeatureWebViewChapterViewerModule
 import com.melonhead.lib_app_context.di.LibAppContextModule
 import com.melonhead.lib_app_data.di.LibAppDataModule
@@ -14,7 +15,6 @@ import com.melonhead.lib_sync_queue.di.LibWriteSyncRepositoryModule
 import com.melonhead.mangadexfollower.AppNavigationMap
 import com.melonhead.mangadexfollower.navigation.MainActivityResolver
 import com.melonhead.mangadexfollower.ui.viewmodels.MainViewModel
-import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.module.dsl.createdAtStart
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -34,6 +34,7 @@ val AppModule = module {
     includes(FeatureMangaListModule)
     includes(FeatureNativeChapterViewerModule)
     includes(FeatureWebViewChapterViewerModule)
+    includes(FeatureSettingsModule)
 
     viewModelOf(::MainViewModel)
 

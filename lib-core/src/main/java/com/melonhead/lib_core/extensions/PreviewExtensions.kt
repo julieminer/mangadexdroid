@@ -24,7 +24,7 @@ object Previews {
 
     fun previewUIChapters() = listOf(
         UIChapter(
-            "",
+            "1",
             "101",
             "Test Title",
             Clock.System.now().epochSeconds,
@@ -33,7 +33,7 @@ object Previews {
             blocked = false,
         ),
         UIChapter(
-            "",
+            "2",
             "102",
             "Test Title 2",
             Clock.System.now().epochSeconds,
@@ -42,8 +42,8 @@ object Previews {
             blocked = false,
         ),
         UIChapter(
-            "",
-            "102",
+            "3",
+            "103",
             "Test Title 2",
             Clock.System.now().epochSeconds,
             false,

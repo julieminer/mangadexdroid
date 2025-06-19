@@ -5,7 +5,6 @@ import com.melonhead.feature_native_chapter_viewer.viewmodels.ChapterViewModel
 import com.melonhead.feature_native_chapter_viewer.navigation.NativeChapterViewerActivityResolver
 import com.melonhead.lib_app_events.di.LibAppEventsModule
 import com.melonhead.lib_navigation.di.LibNavigationModule
-import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module

@@ -5,9 +5,6 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.melonhead.data_shared.models.ui.UIChapter
-import com.melonhead.data_shared.models.ui.UIManga
 import com.melonhead.feature_authentication.AuthRepository
 import com.melonhead.feature_authentication.models.LoginStatus
 import com.melonhead.lib_app_data.AppData
@@ -21,10 +18,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.time.delay
-import kotlinx.serialization.json.Json
 
 class MainViewModel(
     private val authRepository: AuthRepository,

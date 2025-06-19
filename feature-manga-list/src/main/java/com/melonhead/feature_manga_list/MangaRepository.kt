@@ -134,7 +134,7 @@ internal class MangaRepositoryImpl(
         }
 
         val chapterData = atHomeService.getChapterData(chapterId)
-        return if (appData.useDataSaver) {
+        return if (appData.useDataSaver.getValue()) {
             chapterData?.pagesDataSaver()
         } else {
             chapterData?.pages()

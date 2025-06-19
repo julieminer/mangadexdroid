@@ -27,4 +27,6 @@ sealed class UserEvent: AppEvent {
 
     // on setting the manga rating
     data class SetMangaRating(val mangaId: String, val rating: Int): UserEvent()
+
+    data object LogOut: UserEvent()
 }

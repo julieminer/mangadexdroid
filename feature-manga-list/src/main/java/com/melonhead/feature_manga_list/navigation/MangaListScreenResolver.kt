@@ -11,6 +11,7 @@ class MangaListScreenResolver: ScreenResolver<ScreenKey.MangaListScreen> {
         MangaListScreen(
             buildVersionName = key.buildVersionName,
             buildVersionCode = key.buildVersionCode,
+            onSettingsTapped = key.onSettingsTapped,
         )
     }
 }

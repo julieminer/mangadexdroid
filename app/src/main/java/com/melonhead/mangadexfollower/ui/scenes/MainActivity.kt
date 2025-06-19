@@ -27,6 +27,7 @@ import com.melonhead.lib_core.scenes.LoadingScreen
 import com.melonhead.lib_core.scenes.OfflineScreen
 import com.melonhead.lib_core.theme.MangadexFollowerTheme
 import com.melonhead.lib_navigation.Navigator
+import com.melonhead.lib_navigation.keys.ActivityKey
 import com.melonhead.lib_navigation.keys.ScreenKey
 import com.melonhead.mangadexfollower.BuildConfig
 import com.melonhead.mangadexfollower.ui.viewmodels.MainViewModel
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     Surface(Modifier.fillMaxSize().statusBarsPadding()) {
+                        val context = LocalContext.current
                         val loginStatus by viewModel.loginStatus.observeAsState()
                         val clientDetails by viewModel.clientDetails.observeAsState()
                         val connected by LocalContext.current.networkAvailability().collectAsState(true)
@@ -71,6 +73,13 @@ class MainActivity : ComponentActivity() {
                                     screenKey = ScreenKey.MangaListScreen(
                                         buildVersionName = BuildConfig.VERSION_NAME,
                                         buildVersionCode = BuildConfig.VERSION_CODE.toString(),
+                                        onSettingsTapped = {
+                                            val intent = navigator.intentForKey(
+                                                context = context,
+                                                activityKey = ActivityKey.SettingsActivity,
+                                            )
+                                            context.startActivity(intent)
+                                        }
                                     )
                                 )
                             }

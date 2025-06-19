@@ -1,0 +1,24 @@
+plugins {
+    alias libs.plugins.android.library
+    alias libs.plugins.kotlin.android
+    alias libs.plugins.compose.plugin
+}
+
+android {
+    namespace 'com.melonhead.feature_settings'
+}
+
+dependencies {
+    implementation libs.bundles.common
+    testImplementation libs.bundles.common.test
+    implementation libs.bundles.koin
+
+    implementation project(':lib-core')
+    implementation project(":lib-app-events")
+    implementation project(":lib-app-data")
+    implementation project(":lib-navigation")
+
+    implementation project(":data-shared")
+}
+
+apply from: "$rootProject.projectDir/compose-module.gradle"

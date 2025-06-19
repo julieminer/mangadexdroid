@@ -207,13 +207,13 @@ internal class WriteSyncRepositoryImpl(
 
     private suspend fun internalMarkSeriesReading(chapter: ChapterEntity, read: Boolean) {
         if (!read) return
-        if (appData.autoMarkMangaReading.firstOrNull() != true) return
+        if (!appData.autoMarkMangaReading.getValue()) return
         appEventsRepository.postEvent(SystemLogicEvents.ChangeMangaReadingStatus(chapter.mangaId, ReadingStatus.Reading.serialized()))
     }
 
     private suspend fun internalMarkSeriesComplete(chapter: ChapterEntity, read: Boolean) {
         if (!read) return
-        if (appData.autoMarkMangaCompleted.firstOrNull() != true) return
+        if (!appData.autoMarkMangaCompleted.getValue()) return
 
         val manga = mangaDb.getMangaById(chapter.mangaId)
         if (manga == null) {
