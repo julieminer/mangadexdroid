@@ -206,14 +206,8 @@ private fun MangaList(
                 item {
                     AnimatedVisibility(visible = refreshStatus is MangaRefreshStatus.None && !isRefreshing.isRefreshing && !justPulledRefresh) {
                         Box {
-                            IconButton(
-                                modifier = Modifier.size(24.dp).align(Alignment.TopEnd),
-                                onClick = onSettingsTapped
-                            ) {
-                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                            }
-
-                            Text(text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
+                            Text(
+                                text = if (connected) "Last Refresh: $refreshText" else "Offline Mode",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .align(Alignment.Center)
@@ -223,7 +217,14 @@ private fun MangaList(
                                     .padding(bottom = 12.dp),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Normal,
-                                textAlign = TextAlign.Center)
+                                textAlign = TextAlign.Center
+                            )
+                            IconButton(
+                                modifier = Modifier.size(24.dp).align(Alignment.TopEnd),
+                                onClick = onSettingsTapped
+                            ) {
+                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                            }
                         }
                     }
                 }
