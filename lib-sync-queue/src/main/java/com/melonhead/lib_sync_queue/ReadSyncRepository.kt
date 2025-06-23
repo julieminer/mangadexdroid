@@ -97,6 +97,9 @@ internal class ReadSyncRepositoryImpl(
                 e.printStackTrace()
             }
         }
+
+        // begin a refresh as soon as the app is started
+        pullMangaThrottled(AppLifecycleEvent.AppForegrounded)
     }
 
     override suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?) {
