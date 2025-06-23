@@ -28,6 +28,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import com.melonhead.feature_settings.viewmodels.SettingsViewModel
 import com.melonhead.lib_app_data.models.RenderStyle
 import com.melonhead.lib_core.scenes.CloseBanner
@@ -90,6 +92,9 @@ internal class SettingsActivity : ComponentActivity() {
                     },
 
                     onTappedClose = { finish() },
+                    onTappedOpenSource = {
+                        startActivity(Intent(this, OssLicensesMenuActivity::class.java))
+                    }
                 )
             }
         }
@@ -125,59 +130,109 @@ private fun SettingsScreen(
 
     onTappedClose: () -> Unit = {},
     onTappedLogout: () -> Unit = {},
+    onTappedOpenSource: () -> Unit = {},
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        CloseBanner(
-            title = "Settings",
-            hasDescription = false,
-            onDoneTapped = onTappedClose,
-            onSummaryTapped = { }
-        )
+    Surface(modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            CloseBanner(
+                title = "Settings",
+                hasDescription = false,
+                onDoneTapped = onTappedClose,
+                onSummaryTapped = { }
+            )
 
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        ) {
-            val chapterAreaTapSizeOptions = listOf("Small" to 30.dp, "Medium" to 60.dp, "Large" to 90.dp)
-
-            SectionHeader("Manga List")
-            Option(enabled = nativeRendering, "Read Chapters Visible", "The number of already-read chapters visible for each series") {
-                IntField(showChapterReadCount, enabled = it, onChapterReadCountChanged)
-            }
-
-            // todo chapter sorting?
-
-            SectionHeader("Chapter Rendering")
-
-            Option(enabled = true, "Use Native Rendering", "Opens chapters in a native image renderer, rather than a webview") { CheckField(nativeRendering, enabled = it, onNativeRenderingChanged) }
-
-            Option(enabled = nativeRendering,"Use Data Saver", "Downloads chapters using the data-saver images. Only available when using native rendering.") { CheckField(dataSaver, enabled = it, onDataSaverChanged) }
-
-            Option(enabled = nativeRendering, "Native Chapter Next/Prev Page Controls Size", "The size of the next/previous page controls in native rendering.") {
-                SelectField(selectedIndex = chapterAreaTapSizeOptions.indexOfFirst { it.second == chapterAreaTapSize }, options = chapterAreaTapSizeOptions.map { it.first }, enabled = it, onSelectedIndexChanged = {
-                    onChapterSizeChanged(chapterAreaTapSizeOptions[it].second)
-                })
-            }
-
-            SectionHeader("Automatic Actions")
-
-            Option(enabled = true, "Auto Mark Manga Complete", "Automatically marks manga series as completed when the last chapter is read.") { CheckField(autoMarkComplete, it, onAutoMarkCompleteChanged) }
-
-            Option(enabled = true, "Auto Set Manga Reading Status", "Automatically marks manga series as \"Reading\" for series that were previously On Hold.") { CheckField(autoMarkReading, it, onAutoMarkReadingChanged) }
-
-            // notifications
-            // background updates
-
-            SectionHeader("Account")
-
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onTappedLogout,
-                shape = RoundedCornerShape(2.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+            Column(
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
             ) {
-                Text(text = "Log Out", color = MaterialTheme.colorScheme.error)
+                val chapterAreaTapSizeOptions =
+                    listOf("Small" to 30.dp, "Medium" to 60.dp, "Large" to 90.dp)
+
+                SectionHeader("Manga List")
+                Option(
+                    enabled = nativeRendering,
+                    "Read Chapters Visible",
+                    "The number of already-read chapters visible for each series"
+                ) {
+                    IntField(showChapterReadCount, enabled = it, onChapterReadCountChanged)
+                }
+
+                // todo chapter sorting?
+
+                SectionHeader("Chapter Rendering")
+
+                Option(
+                    enabled = true,
+                    "Use Native Rendering",
+                    "Opens chapters in a native image renderer, rather than a webview"
+                ) { CheckField(nativeRendering, enabled = it, onNativeRenderingChanged) }
+
+                Option(
+                    enabled = nativeRendering,
+                    "Use Data Saver",
+                    "Downloads chapters using the data-saver images. Only available when using native rendering."
+                ) { CheckField(dataSaver, enabled = it, onDataSaverChanged) }
+
+                Option(
+                    enabled = nativeRendering,
+                    "Native Chapter Next/Prev Page Controls Size",
+                    "The size of the next/previous page controls in native rendering."
+                ) {
+                    SelectField(
+                        selectedIndex = chapterAreaTapSizeOptions.indexOfFirst { it.second == chapterAreaTapSize },
+                        options = chapterAreaTapSizeOptions.map { it.first },
+                        enabled = it,
+                        onSelectedIndexChanged = {
+                            onChapterSizeChanged(chapterAreaTapSizeOptions[it].second)
+                        })
+                }
+
+                SectionHeader("Automatic Actions")
+
+                Option(
+                    enabled = true,
+                    "Auto Mark Manga Complete",
+                    "Automatically marks manga series as completed when the last chapter is read."
+                ) { CheckField(autoMarkComplete, it, onAutoMarkCompleteChanged) }
+
+                Option(
+                    enabled = true,
+                    "Auto Set Manga Reading Status",
+                    "Automatically marks manga series as \"Reading\" for series that were previously On Hold."
+                ) { CheckField(autoMarkReading, it, onAutoMarkReadingChanged) }
+
+                // notifications
+                // background updates
+
+                SectionHeader("Account")
+
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onTappedLogout,
+                    shape = RoundedCornerShape(2.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                ) {
+                    Text(text = "Log Out", color = MaterialTheme.colorScheme.error)
+                }
+
+                SectionHeader("About App")
+
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onTappedOpenSource,
+                    shape = RoundedCornerShape(2.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground)
+                ) {
+                    Text(
+                        text = "Open Source Licenses",
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                // TODO: include version info here
             }
         }
     }
