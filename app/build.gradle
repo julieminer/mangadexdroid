@@ -65,3 +65,13 @@ dependencies {
     implementation project(':feature-webview-chapter-viewer')
     implementation project(':feature-settings')
 }
+
+aboutLibraries {
+    export {
+        // Define the output path (including fileName). Modifying this will disable the automatic meta data discovery for supported platforms.
+        outputFile = file("../feature-settings/src/main/res/raw/aboutlibraries.json")
+
+        // Enable pretty printing for the generated JSON file
+        prettyPrint = true
+    }
+}
