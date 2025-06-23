@@ -13,6 +13,8 @@ dependencies {
     testImplementation libs.bundles.common.test
     implementation libs.bundles.koin
 
+    implementation libs.oss.lib
+
     implementation project(':lib-core')
     implementation project(":lib-app-events")
     implementation project(":lib-app-data")

@@ -5,6 +5,7 @@ plugins {
     alias libs.plugins.compose.plugin
     alias libs.plugins.google.services
     alias libs.plugins.firebase.crashlytics
+    alias libs.plugins.oss
     id 'kotlin-parcelize'
 }
 
@@ -42,6 +43,8 @@ dependencies {
     testImplementation libs.bundles.common.test
     implementation libs.work.ktx
     implementation libs.bundles.koin
+
+    implementation libs.oss.lib
 
     // note: this should not contain any dependencies on ':data-X' modules, those should only be used by features
 

@@ -33,6 +33,10 @@
 
         <activity android:name="com.melonhead.feature_webview_chapter_viewer.WebViewActivity" />
         <activity android:name="com.melonhead.feature_native_chapter_viewer.ChapterActivity" />
+        <activity android:name="com.google.android.gms.oss.licenses.OssLicensesMenuActivity"
+            android:theme="@style/Theme.Oss" />
+        <activity android:name="com.google.android.gms.oss.licenses.OssLicensesActivity"
+            android:theme="@style/Theme.Oss" />
     </application>
 
 </manifest>
