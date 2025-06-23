@@ -5,6 +5,7 @@ plugins {
     alias libs.plugins.compose.plugin
     alias libs.plugins.google.services
     alias libs.plugins.firebase.crashlytics
+    alias libs.plugins.aboutLibraries
     id 'kotlin-parcelize'
 }
 
@@ -63,4 +64,14 @@ dependencies {
     implementation project(':feature-native-chapter-viewer')
     implementation project(':feature-webview-chapter-viewer')
     implementation project(':feature-settings')
+}
+
+aboutLibraries {
+    export {
+        // Define the output path (including fileName). Modifying this will disable the automatic meta data discovery for supported platforms.
+        outputFile = file("../feature-settings/src/main/res/raw/aboutlibraries.json")
+
+        // Enable pretty printing for the generated JSON file
+        prettyPrint = true
+    }
 }
