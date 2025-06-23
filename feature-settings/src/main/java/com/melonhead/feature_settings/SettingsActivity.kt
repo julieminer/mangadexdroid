@@ -90,7 +90,12 @@ internal class SettingsActivity : ComponentActivity() {
                         finish()
                     },
 
-                    onTappedClose = { finish() },
+                    onTappedLibraryInfo = {
+                        startActivity(Intent(this, OssActivity::class.java))
+                    },
+
+                    onTappedClose = { finish() }
+
                 )
             }
         }
@@ -126,6 +131,7 @@ private fun SettingsScreen(
 
     onTappedClose: () -> Unit = {},
     onTappedLogout: () -> Unit = {},
+    onTappedLibraryInfo: () -> Unit = {},
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -213,6 +219,18 @@ private fun SettingsScreen(
                 ) {
                     Text(text = "Log Out", color = MaterialTheme.colorScheme.error)
                 }
+
+                SectionHeader("App")
+
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onTappedLibraryInfo,
+                    shape = RoundedCornerShape(2.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface)
+                ) {
+                    Text(text = "Open Source Libraries", color = MaterialTheme.colorScheme.onSurface)
+                }
+
             }
         }
     }
