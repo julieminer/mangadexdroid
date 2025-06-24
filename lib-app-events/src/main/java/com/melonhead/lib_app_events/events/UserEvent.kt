@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture
 // These are events that are triggered directly from user action
 sealed class UserEvent: AppEvent {
     // on refresh manga list
-    data class RefreshManga(val completionJob: CompletableFuture<Unit>? = null): UserEvent()
+    data class RefreshManga(val completionJob: CompletableFuture<Unit>? = null, val skipNetworkCheck: Boolean = false): UserEvent()
 
     // on change manga reader type
     data class SetUseWebView(val mangaId: String, val useWebView: Boolean): UserEvent()

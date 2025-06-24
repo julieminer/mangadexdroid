@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture
 
 interface ReadSyncRepository {
     val refreshStatus: Flow<MangaRefreshStatus>
-    suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?)
+    suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?, skipNetworkCheck: Boolean = false)
 }
 
 internal class ReadSyncRepositoryImpl(
@@ -51,7 +51,12 @@ internal class ReadSyncRepositoryImpl(
     private val appEventsRepository: AppEventsRepository,
 ): ReadSyncRepository {
     private val pullMangaThrottled: (AppEvent) -> Unit = throttleLatest(300L, externalScope) { event ->
-        externalScope.launch { pullManga((event as? UserEvent.RefreshManga)?.completionJob) }
+        externalScope.launch {
+            pullManga(
+                (event as? UserEvent.RefreshManga)?.completionJob,
+                (event as? UserEvent.RefreshManga)?.skipNetworkCheck == true
+            )
+        }
     }
 
     private val mutableRefreshStatus = MutableStateFlow<MangaRefreshStatus>(MangaRefreshStatus.None)
@@ -97,17 +102,17 @@ internal class ReadSyncRepositoryImpl(
                 e.printStackTrace()
             }
         }
-
-        // begin a refresh as soon as the app is started
-        pullMangaThrottled(AppLifecycleEvent.AppForegrounded)
     }
 
-    override suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?) {
-        if (!context.isNetworkAvailable()) {
+    override suspend fun pullManga(refreshCompletable: (CompletableFuture<Unit>)?, skipNetworkCheck: Boolean) {
+        Clog.i("Refresh: refreshworker has completabled ${refreshCompletable != null}")
+        if (!skipNetworkCheck && !context.isNetworkAvailable()) {
+            Clog.i("refresh cancelled, offline")
             refreshCompletable?.complete(Unit)
             return
         }
 
+        Clog.i("refresh token")
         // refresh token
         val refreshCompletionJob = CompletableFuture<Unit>()
         appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))
@@ -122,6 +127,8 @@ internal class ReadSyncRepositoryImpl(
         Clog.i("refreshManga")
 
         mutableRefreshStatus.value = MangaRefreshStatus.Following
+
+        Clog.i("refresh get followed chapters")
 
         // get all followed chapters
         val followedChaptersResponse = userService.getFollowedChapters()
@@ -155,7 +162,7 @@ internal class ReadSyncRepositoryImpl(
         // find the new chapters
         val newChaptersEntities = chapterEntities.filter { !chapterDb.containsChapter(it.id) }
 
-        Clog.i("New chapters: ${newChaptersEntities.count()}")
+        Clog.i("Refreshing new chapters: ${newChaptersEntities.count()}")
 
         // if there are new chapters
         if (newChaptersEntities.isNotEmpty()) {
@@ -164,11 +171,15 @@ internal class ReadSyncRepositoryImpl(
             chapterDb.insertAll(*newChaptersEntities.toTypedArray())
         }
 
+        Clog.i("Refreshing read status")
+
         mutableRefreshStatus.value = MangaRefreshStatus.ReadStatus
 
         val manga = mangaDb.getAllSync()
         val chapters = chapterDb.getAllSync()
         readStatusRepository.refresh(manga, chapters)
+
+        Clog.i("Completing refresh")
 
         mutableRefreshStatus.value = MangaRefreshStatus.None
         appData.updateLastRefreshDate()
