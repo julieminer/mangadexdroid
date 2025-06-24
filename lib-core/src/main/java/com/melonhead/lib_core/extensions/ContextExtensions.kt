@@ -4,22 +4,24 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.isActive
 
 fun Context.networkAvailability(): Flow<Boolean> {
     return flow {
         emit(isNetworkAvailable())
-        while (true) {
+        while (currentCoroutineContext().isActive) {
             delay(500L)
-            emit(isNetworkAvailable())
+            emit(isNetworkAvailable(fromFlow = true))
         }
     }.distinctUntilChanged()
 }
 
-fun Context.isNetworkAvailable(): Boolean {
+fun Context.isNetworkAvailable(fromFlow: Boolean = false): Boolean {
     val connectivityManager =
         this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
