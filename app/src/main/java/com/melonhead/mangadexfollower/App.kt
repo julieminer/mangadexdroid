@@ -4,14 +4,10 @@ import android.app.Application
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import com.melonhead.lib_app_context.AppContext
 import com.melonhead.lib_app_events.AppEventsRepository
 import com.melonhead.lib_app_events.events.AppLifecycleEvent
 import com.melonhead.lib_app_events.events.AuthenticationEvent
-import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_networking.extensions.error401Callback
 import com.melonhead.mangadexfollower.di.AppModule
 import com.melonhead.mangadexfollower.work_manager.RefreshWorker
@@ -19,8 +15,6 @@ import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.GlobalContext.startKoin
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.toJavaDuration
 
 class App: Application() {
     private val appEventsRepository: AppEventsRepository by inject()
@@ -53,12 +47,7 @@ class App: Application() {
                 super.onStart(owner)
                 appContext.isInForeground = true
                 appEventsRepository.postEvent(AppLifecycleEvent.AppForegrounded)
-                Clog.i("Creating background task")
-                val refreshWorkRequest = PeriodicWorkRequestBuilder<RefreshWorker>(
-                    repeatInterval = 30.minutes.toJavaDuration(),
-                    flexTimeInterval = 15.minutes.toJavaDuration()
-                ).build()
-                WorkManager.getInstance(this@App).enqueueUniquePeriodicWork("refresh-task", ExistingPeriodicWorkPolicy.UPDATE, refreshWorkRequest)
+                RefreshWorker.scheduleDebugTask(this@App)
             }
 
             override fun onStop(owner: LifecycleOwner) {
