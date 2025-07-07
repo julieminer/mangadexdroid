@@ -1,7 +1,7 @@
 [versions]
 androidPluginVersion = "8.11.0"
-googleServicesPluginVersion = "4.4.2"
 crashlyticsGradlePluginVersion = "3.0.4"
+googleServicesPluginVersion = "4.4.3"
 gradlePluginVersion = "8.11.0"
 kotlinGradlePluginVersion = "2.0.0"
 kspPluginVersion = "2.0.0-1.0.21"
