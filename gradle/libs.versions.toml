@@ -30,7 +30,7 @@ materialVersion = "1.12.0"
 roomVersion = "2.7.2"
 swipeRefreshVersion = "0.36.0"
 workKtxVersion = "2.10.2"
-aboutLibraries = "12.2.3"
+aboutLibraries = "12.2.4"
 
 [libraries]
 accompanist-swiperefresh = { group = "com.google.accompanist", name = "accompanist-swiperefresh", version.ref = "swipeRefreshVersion" }
