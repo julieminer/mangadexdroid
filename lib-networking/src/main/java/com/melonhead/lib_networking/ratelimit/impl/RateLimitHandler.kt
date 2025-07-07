@@ -3,7 +3,7 @@ import com.melonhead.lib_networking.ratelimit.core.RateInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 internal class RateLimitHandler(rates: List<RateInfo>) {
     private val rates = RateContainer.fromAll(rates)

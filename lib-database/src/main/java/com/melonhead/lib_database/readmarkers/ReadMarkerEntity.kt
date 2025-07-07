@@ -6,8 +6,8 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.melonhead.lib_database.InstantConverter
 import com.melonhead.lib_database.chapter.ChapterEntity
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Entity(tableName = "readmarker")
 @TypeConverters(InstantConverter::class)

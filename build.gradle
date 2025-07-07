@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 buildscript {
     dependencies {
         classpath "com.android.tools.build:gradle:${libs.versions.gradlePluginVersion}"
@@ -12,4 +14,14 @@ plugins {
     alias libs.plugins.kotlinx.serialization apply false
     alias libs.plugins.ksp apply false
     alias libs.plugins.aboutLibraries apply false
+}
+
+allprojects {
+    tasks.withType(KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += [
+                    "-opt-in=kotlin.time.ExperimentalTime",
+            ]
+        }
+    }
 }
