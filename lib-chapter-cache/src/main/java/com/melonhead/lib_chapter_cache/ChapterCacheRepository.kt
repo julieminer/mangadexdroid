@@ -180,6 +180,7 @@ internal class ChapterCacheRepositoryImpl(
                 val newChapters = chapters
                     .filter { !readStatusRepository.isRead(it) }
                     .filter { !it.blockedChapter }
+                    .filter { chapter -> !manga.first { it.id == chapter.mangaId }.useWebview }
                     .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
                 cacheImagesForChapters(manga, newChapters)
 

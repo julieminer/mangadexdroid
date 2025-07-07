@@ -22,10 +22,9 @@ import com.melonhead.lib_navigation.Navigator
 import com.melonhead.lib_navigation.keys.ActivityKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import androidx.core.net.toUri
 import com.melonhead.lib_logging.Clog
 

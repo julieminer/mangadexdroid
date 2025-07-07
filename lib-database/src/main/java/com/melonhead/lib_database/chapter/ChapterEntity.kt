@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.melonhead.lib_database.InstantConverter
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 @Entity(tableName = "chapter")
 @TypeConverters(InstantConverter::class)

@@ -1,7 +1,7 @@
 package com.melonhead.lib_database
 
 import androidx.room.TypeConverter
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 internal object InstantConverter {
     @TypeConverter
