@@ -3,7 +3,7 @@ androidPluginVersion = "8.11.0"
 crashlyticsGradlePluginVersion = "3.0.4"
 googleServicesPluginVersion = "4.4.3"
 gradlePluginVersion = "8.11.0"
-kotlinGradlePluginVersion = "2.0.0"
+kotlinGradlePluginVersion = "2.2.0"
 kspPluginVersion = "2.0.0-1.0.21"
 
 activityComposeVersion = "1.10.1"
