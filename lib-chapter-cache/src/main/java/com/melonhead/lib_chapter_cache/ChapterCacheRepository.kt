@@ -178,10 +178,12 @@ internal class ChapterCacheRepositoryImpl(
         externalScope.launch(Dispatchers.IO) {
             cacheOperation {
                 val newChapters = chapters
-                    .filter { !readStatusRepository.isRead(it) }
-                    .filter { !it.blockedChapter }
-                    .filter { chapter -> !manga.first { it.id == chapter.mangaId }.useWebview }
-                    .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
+                    .filter { chapter ->
+                        !readStatusRepository.isRead(chapter) &&
+                        !chapter.blockedChapter &&
+                        !manga.first { it.id == chapter.mangaId }.useWebview &&
+                        (getChapterPageCountFromCache(chapter.mangaId, chapter.id) ?: 0) == 0
+                    }
 
                 if (newChapters.isEmpty()) return@cacheOperation
                 cacheImagesForChapters(manga, newChapters)
@@ -189,8 +191,10 @@ internal class ChapterCacheRepositoryImpl(
                 Clog.i("Finished downloading images for ${newChapters.count()} new chapters")
 
                 val readChapters = chapters
-                    .filter { readStatusRepository.isRead(it) }
-                    .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
+                    .filter {
+                        readStatusRepository.isRead(it) &&
+                        (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0
+                    }
 
                 if (readChapters.isEmpty()) return@cacheOperation
                 clearImagesForChapters(readChapters)
