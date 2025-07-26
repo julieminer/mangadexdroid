@@ -182,6 +182,8 @@ internal class ChapterCacheRepositoryImpl(
                     .filter { !it.blockedChapter }
                     .filter { chapter -> !manga.first { it.id == chapter.mangaId }.useWebview }
                     .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) == 0 }
+
+                if (newChapters.isEmpty()) return@cacheOperation
                 cacheImagesForChapters(manga, newChapters)
 
                 Clog.i("Finished downloading images for ${newChapters.count()} new chapters")
@@ -189,6 +191,8 @@ internal class ChapterCacheRepositoryImpl(
                 val readChapters = chapters
                     .filter { readStatusRepository.isRead(it) }
                     .filter { (getChapterPageCountFromCache(it.mangaId, it.id) ?: 0) > 0 }
+
+                if (readChapters.isEmpty()) return@cacheOperation
                 clearImagesForChapters(readChapters)
 
                 Clog.i("Finished removing images for ${readChapters.count()} chapters")
