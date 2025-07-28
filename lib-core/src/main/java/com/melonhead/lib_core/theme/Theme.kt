@@ -43,6 +43,7 @@ fun MangadexFollowerTheme(
         darkTheme: Boolean = isSystemInDarkTheme(),
         // Dynamic color is available on Android 12+
         dynamicColor: Boolean = true,
+        useLightStatusColour: Boolean = false,
         content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -57,7 +58,7 @@ fun MangadexFollowerTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme // negate darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = if (useLightStatusColour) !darkTheme else darkTheme // negate darkTheme
         }
     }
 
