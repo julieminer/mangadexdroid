@@ -181,7 +181,7 @@ internal class ChapterCacheRepositoryImpl(
                     .filter { chapter ->
                         !readStatusRepository.isRead(chapter) &&
                         !chapter.blockedChapter &&
-                        !manga.first { it.id == chapter.mangaId }.useWebview &&
+                        manga.firstOrNull { it.id == chapter.mangaId }?.useWebview != true &&
                         (getChapterPageCountFromCache(chapter.mangaId, chapter.id) ?: 0) == 0
                     }
 
