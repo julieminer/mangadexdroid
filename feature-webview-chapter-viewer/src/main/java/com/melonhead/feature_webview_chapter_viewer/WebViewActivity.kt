@@ -39,7 +39,7 @@ internal class WebViewActivity : ComponentActivity() {
 
 
         setContent {
-            MangadexFollowerTheme {
+            MangadexFollowerTheme(useLightStatusColour = true) {
                 val url by viewModel.url.observeAsState()
                 val manga = viewModel.manga
 
