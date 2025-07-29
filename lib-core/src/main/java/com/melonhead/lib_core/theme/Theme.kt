@@ -58,7 +58,7 @@ fun MangadexFollowerTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = if (useLightStatusColour) !darkTheme else darkTheme // negate darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = if (useLightStatusColour) darkTheme else !darkTheme // negate darkTheme
         }
     }
 
