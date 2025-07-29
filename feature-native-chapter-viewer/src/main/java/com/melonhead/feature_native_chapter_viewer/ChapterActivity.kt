@@ -26,7 +26,7 @@ internal class ChapterActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MangadexFollowerTheme {
+            MangadexFollowerTheme(useLightStatusColour = true) {
                 val page by viewModel.currentPage.collectAsState(initial = null)
                 val pages by viewModel.chapterData.collectAsState()
 

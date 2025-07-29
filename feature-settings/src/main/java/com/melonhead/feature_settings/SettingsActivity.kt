@@ -56,7 +56,7 @@ internal class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MangadexFollowerTheme {
+            MangadexFollowerTheme(useLightStatusColour = true) {
                 val scope = rememberCoroutineScope()
 
                 val renderStyle by viewModel.appData.renderStyle.collectAsState()
