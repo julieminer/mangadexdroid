@@ -98,10 +98,10 @@ internal class ReadStatusRepositoryImpl(
             Clog.i("ReadStatus.markChapterRead: mangaId: $mangaId, chapterId: $chapterId, read: $read")
 
             val chapter = chapterDb.getChapterForId(chapterId)
-            val chapterTitle = chapter.chapterTitle
+            val chapterNumber = chapter.chapter
 
-            if (chapterTitle != null) {
-                val chapters = chapterDb.getChaptersByTitle(chapterTitle)
+            if (chapterNumber != null) {
+                val chapters = chapterDb.getChaptersForChapter(chapterNumber)
                 chapters.forEach {
                     internalMarkChapterAsRead(it, isDuplicate = true, read = read)
                 }
