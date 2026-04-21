@@ -26,17 +26,6 @@ jobs:
       with:
         gradlePath: app/build.gradle
         versionCode: ${{github.run_number}}
-    - name: print details
-      env: 
-        signingKeyBase64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
-        # The key alias
-        alias: ${{ secrets.DEBUG_KEYSTORE_ALIAS }}
-        # The password to the keystore
-        keyStorePassword: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
-      run: |
-        echo $signingKeyBase64
-        echo $alias
-        echo $keyStorePassword
     - name: Build Debug APK
       run: ./gradlew assembleDebug
     - name: Sign Android
