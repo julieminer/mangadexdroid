@@ -26,6 +26,8 @@ jobs:
       with:
         gradlePath: app/build.gradle
         versionCode: ${{github.run_number}}
+    - name: print details
+      run: echo ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
     - name: Build Debug APK
       run: ./gradlew assembleDebug
     - name: Sign Android
