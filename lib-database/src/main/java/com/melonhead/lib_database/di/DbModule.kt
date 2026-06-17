@@ -1,6 +1,8 @@
 package com.melonhead.lib_database.di
 
+import android.util.Log
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.melonhead.lib_database.chapter.ChapterDBMigrations
 import com.melonhead.lib_database.chapter.ChapterDatabase
 import com.melonhead.lib_database.manga.MangaDBMigrations
@@ -16,20 +18,30 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 import org.koin.dsl.module
+import java.util.concurrent.Executors
 
 val LibDbModule = module {
     single(createdAtStart = true) {
-        Room.databaseBuilder(
+        val db = Room.databaseBuilder(
             get(),
             ChapterDatabase::class.java, "chapter"
         ).addMigrations(
             ChapterDBMigrations.MIGRATION_1_2,
             ChapterDBMigrations.MIGRATION_2_3,
-        ).build()
+        )
+
+        db.setQueryCallback(
+            { query, bindArgs ->
+                Log.d("ChapterDatabaseLog", "Query $query $bindArgs")
+            },
+            executor = Executors.newSingleThreadExecutor()
+        )
+
+        db.build()
     }
 
     single(createdAtStart = true) {
-        Room.databaseBuilder(
+        val db = Room.databaseBuilder(
             get(),
             MangaDatabase::class.java, MangaDao.TABLE_NAME
         ).addMigrations(
@@ -40,23 +52,50 @@ val LibDbModule = module {
             MangaDBMigrations.MIGRATION_5_6,
             MangaDBMigrations.MIGRATION_6_7,
             MangaDBMigrations.MIGRATION_7_8,
-        ).build()
+        )
+
+        db.setQueryCallback(
+            { query, bindArgs ->
+                Log.d("MangaDatabaseLog", "Query $query $bindArgs")
+            },
+            executor = Executors.newSingleThreadExecutor()
+        )
+
+        db.build()
     }
 
     single(createdAtStart = true) {
-        Room.databaseBuilder(
+        val db = Room.databaseBuilder(
             get(),
             ReadMarkerDatabase::class.java, "readmarker"
-        ).build()
+        )
+
+        db.setQueryCallback(
+            { query, bindArgs ->
+                //Log.d("ReadMarkerDatabaseLog", "Query $query $bindArgs")
+            },
+            executor = Executors.newSingleThreadExecutor()
+        )
+
+        db.build()
     }
 
     single(createdAtStart = true) {
-        Room.databaseBuilder(
+        val db = Room.databaseBuilder(
             get(),
             SyncQueueDatabase::class.java, SyncQueueDao.TABLE_NAME
         ).addTypeConverter(
             get<SyncQueueEventTypeConverters>()
-        ).build()
+        )
+
+        db.setQueryCallback(
+            { query, bindArgs ->
+                Log.d("SyncQueueDatabaseLog", "Query $query $bindArgs")
+            },
+            executor = Executors.newSingleThreadExecutor()
+        )
+
+        db.build()
     }
 
     single(createdAtStart = true) {

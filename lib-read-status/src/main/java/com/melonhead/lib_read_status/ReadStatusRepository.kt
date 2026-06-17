@@ -13,6 +13,7 @@ import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 interface ReadStatusRepository {
@@ -29,7 +30,7 @@ internal class ReadStatusRepositoryImpl(
     private val appEventsRepository: AppEventsRepository,
 ) : ReadStatusRepository {
 
-    private val internalReadMarker = readMarkerDb.getAll()
+    private val internalReadMarker = readMarkerDb.getAll().distinctUntilChanged()
     override val readMarkers: Flow<List<ReadMarkerEntity>>
         get() = internalReadMarker
 

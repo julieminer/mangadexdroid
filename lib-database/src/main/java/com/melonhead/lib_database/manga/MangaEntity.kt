@@ -21,6 +21,7 @@ data class MangaEntity(
     @ColumnInfo(name = "last_chapter") val lastChapter: String?,
     @ColumnInfo(name = "description") val description: String?,
     @ColumnInfo(name = "rating") val rating: Int?,
+    // TODO: add updated column 
 ) {
     // required for mapping functions
     companion object

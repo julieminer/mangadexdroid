@@ -16,9 +16,17 @@ import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_chapter_cache.ChapterCacheRepository
 import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_sync_queue.ReadSyncRepository
+import io.ktor.util.Hash.combine
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal interface MangaRepository {
     val manga: Flow<List<UIManga>>
@@ -53,6 +61,13 @@ internal class MangaRepositoryImpl(
     init {
         Clog.i("MangaRepository init")
         externalScope.launch {
+            combine(mangaDb.allSeries()) { dbSeries ->
+                dbSeries
+            }.collectLatest {
+            }
+        }
+
+        externalScope.launch {
             // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
@@ -77,48 +92,86 @@ internal class MangaRepositoryImpl(
         }
     }
 
-    private fun generateUIManga(dbSeries: List<MangaEntity>, dbChapters: List<ChapterEntity>, cachingStatus: CachingStatus): List<UIManga> {
+    private suspend fun generateUIManga(dbSeries: List<MangaEntity>, dbChapters: List<ChapterEntity>, cachingStatus: CachingStatus): List<UIManga> = withContext(Dispatchers.IO) {
         // map the series and chapters into UIManga, sorted from most recent to least
-        val uiManga = dbSeries.mapNotNull { manga ->
-            var hasExternalChapters = false
-            val chapters = dbChapters.filter { !it.blockedChapter }.filter { it.mangaId == manga.id }.map { chapter ->
-                val read = readStatusRepository.isRead(chapter)
-                hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
-                UIChapter(
-                    id = chapter.id,
-                    chapter = chapter.chapter,
-                    title = chapter.chapterTitle,
-                    createdDate = chapter.createdAt.epochSeconds,
-                    read = read,
-                    blocked = chapter.blockedChapter,
-                    isDownloadingCache = (cachingStatus as? CachingStatus.Caching)?.chapterId == chapter.id,
-                    externalUrl = chapter.externalUrl,
-                    cachedPages = chapterCacheRepository.getChapterPageCountFromCache(manga.id, chapter.id)
-                )
+        val mangaJobs = mutableListOf<Deferred<UIManga?>>()
+        mangaJobs.addAll(dbSeries.map { manga ->
+            async {
+                Clog.measure("julie: ui manga") {
+                    var hasExternalChapters = false
+
+                    val chapterJobs = mutableListOf<Deferred<UIChapter>>()
+
+                    val chaptersToConsider = Clog.measure("julie: ui chapters to consider") {
+                        dbChapters
+                            .filter { !it.blockedChapter }
+                            .filter { it.mangaId == manga.id }
+                    }
+
+                    chapterJobs.addAll(chaptersToConsider
+                        .map { chapter ->
+                            async {
+                                Clog.measure("julie: ui chapter") {
+                                    // TODO: check if we're calling mangadb in here
+                                    val read = Clog.measure("julie: ui chapter isRead") { readStatusRepository.isRead(chapter) }
+
+                                    // TODO: check if we're calling mangadb in here
+                                    val pages = Clog.measure("julie: ui chapter pages") { chapterCacheRepository.getChapterPageCountFromCache(
+                                        manga.id,
+                                        chapter.id
+                                    ) }
+
+                                    hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
+                                    UIChapter(
+                                        id = chapter.id,
+                                        chapter = chapter.chapter,
+                                        title = chapter.chapterTitle,
+                                        createdDate = chapter.createdAt.epochSeconds,
+                                        read = read,
+                                        blocked = chapter.blockedChapter,
+                                        isDownloadingCache = (cachingStatus as? CachingStatus.Caching)?.chapterId == chapter.id,
+                                        externalUrl = chapter.externalUrl,
+                                        cachedPages = pages
+                                    )
+                                }
+                            }
+                        }
+                    )
+
+                    val chapters = chapterJobs.awaitAll()
+
+                    if (chapters.isEmpty()) return@measure null
+
+                    Clog.d("julie: total chapters = ${chapterJobs.count()}")
+
+                    UIManga(
+                        id = manga.id,
+                        manga.chosenTitle ?: "",
+                        chapters = chapters,
+                        manga.mangaCoverId,
+                        useWebview = hasExternalChapters || manga.useWebview,
+                        altTitles = manga.mangaTitles,
+                        tags = manga.tags.sortedBy { it.id }.map { it.name },
+                        status = manga.status,
+                        contentRating = manga.contentRating,
+                        lastChapter = manga.lastChapter,
+                        description = manga.description,
+                        rating = manga.rating,
+                    )
+                }
             }
-            if (chapters.isEmpty()) return@mapNotNull null
-            UIManga(
-                id = manga.id,
-                manga.chosenTitle ?: "",
-                chapters = chapters,
-                manga.mangaCoverId,
-                useWebview = hasExternalChapters || manga.useWebview,
-                altTitles = manga.mangaTitles,
-                tags = manga.tags.sortedBy { it.id }.map { it.name },
-                status = manga.status,
-                contentRating = manga.contentRating,
-                lastChapter = manga.lastChapter,
-                description = manga.description,
-                rating = manga.rating,
-            )
-        }
-        if (uiManga.isEmpty()) return emptyList()
+        })
+
+        val uiManga = mangaJobs.awaitAll().filterNotNull()
+        if (uiManga.isEmpty()) return@withContext emptyList()
 
         // split into two categories, unread and read
-        val hasUnread = uiManga.filter { it.chapters.any { !it.read } }.sortedByDescending { it.chapters.first().createdDate }
-        val allRead = uiManga.filter { it.chapters.all { it.read } }.sortedByDescending { it.chapters.first().createdDate }
+        val hasUnread = uiManga.filter { it.chapters.any { !it.read } }
+            .sortedByDescending { it.chapters.first().createdDate }
+        val allRead = uiManga.filter { it.chapters.all { it.read } }
+            .sortedByDescending { it.chapters.first().createdDate }
 
-        return hasUnread + allRead
+        return@withContext hasUnread + allRead
     }
 
     override suspend fun getChapterData(mangaId: String, chapterId: String): List<String>? {
@@ -159,14 +212,14 @@ internal class MangaRepositoryImpl(
     }
 
     private fun setUseWebview(mangaId: String, useWebView: Boolean) {
-        externalScope.launch {
+        externalScope.launch(Dispatchers.Main) {
             val entity = mangaDb.mangaByIdAsyncDistinct(mangaId).first() ?: return@launch
             mangaDb.update(entity.copy(useWebview = useWebView))
         }
     }
 
     private fun updateChosenTitle(mangaId: String, chosenTitle: String) {
-        externalScope.launch {
+        externalScope.launch(Dispatchers.Main) {
             val entity = mangaDb.mangaByIdAsyncDistinct(mangaId).first() ?: return@launch
             if (!entity.mangaTitles.contains(chosenTitle)) return@launch
             mangaDb.update(entity.copy(chosenTitle = chosenTitle))

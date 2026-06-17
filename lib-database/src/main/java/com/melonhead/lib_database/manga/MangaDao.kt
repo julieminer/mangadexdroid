@@ -6,9 +6,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface MangaDao {
+    // TODO: limit these as necessary and order by updated date
     @Query("SELECT * FROM $TABLE_NAME")
     fun getAll(): Flow<List<MangaEntity>>
 
+    // TODO: limit these as necessary and order by updated date
     @Query("SELECT * from $TABLE_NAME")
     suspend fun getAllSync(): List<MangaEntity>
 

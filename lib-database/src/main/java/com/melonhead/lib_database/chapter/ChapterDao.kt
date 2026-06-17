@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface ChapterDao {
-    @Query("SELECT * FROM chapter ORDER BY createdAt desc")
+    @Query("SELECT * FROM chapter ORDER BY createdAt desc LIMIT 500")
     fun getAll(): Flow<List<ChapterEntity>>
 
-    @Query("SELECT * FROM chapter ORDER BY createdAt desc")
+    @Query("SELECT * FROM chapter ORDER BY createdAt desc LIMIT 50")
     suspend fun getAllSync(): List<ChapterEntity>
 
     fun allChapters() = getAll().distinctUntilChanged()
