@@ -27,6 +27,8 @@ import kotlinx.coroutines.launch
 import kotlin.time.Instant
 import androidx.core.net.toUri
 import com.melonhead.lib_logging.Clog
+import kotlinx.coroutines.Dispatchers
+import okhttp3.Dispatcher
 
 internal class MangaListViewModel(
     private val mangaRepository: MangaRepository,
@@ -49,7 +51,7 @@ internal class MangaListViewModel(
     val refreshText = mutableRefreshText.asLiveData()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appEventsRepository.events.collectLatest { event ->
                 if (event is UserEvent.OpenedNotification) {
                     onChapterClicked(event.context, event.mangaId, event.chapterId)

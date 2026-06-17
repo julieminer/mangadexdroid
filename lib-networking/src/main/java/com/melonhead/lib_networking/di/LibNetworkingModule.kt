@@ -6,7 +6,7 @@ import com.melonhead.lib_networking.ratelimit.impl.default
 import com.melonhead.lib_networking.ratelimit.impl.rate
 import com.melonhead.lib_networking.ratelimit.impl.select
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -23,7 +23,7 @@ import kotlin.time.DurationUnit
 
 val LibNetworkingModule = module {
     single {
-        HttpClient(CIO) {
+        HttpClient(OkHttp) {
             install(RateLimit) {
                 select { it.url.toString().contains("api.mangadex.org") }.rate(1, 3, DurationUnit.SECONDS)
                 select { it.url.toString().contains("auth.mangadex.org") }.rate(1, 3, DurationUnit.SECONDS)
