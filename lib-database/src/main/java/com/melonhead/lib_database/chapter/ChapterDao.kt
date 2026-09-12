@@ -9,7 +9,7 @@ interface ChapterDao {
     @Query("SELECT * FROM chapter ORDER BY createdAt desc LIMIT 500")
     fun getAll(): Flow<List<ChapterEntity>>
 
-    @Query("SELECT * FROM chapter ORDER BY createdAt desc LIMIT 50")
+    @Query("SELECT * FROM chapter ORDER BY createdAt desc LIMIT 100")
     suspend fun getAllSync(): List<ChapterEntity>
 
     fun allChapters() = getAll().distinctUntilChanged()
@@ -31,6 +31,9 @@ interface ChapterDao {
 
     @Delete
     suspend fun delete(chapters: ChapterEntity)
+
+    @Delete
+    suspend fun delete(chapters: List<ChapterEntity>)
 
     @Update
     suspend fun update(vararg chapters: ChapterEntity)

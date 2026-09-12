@@ -112,6 +112,17 @@ internal class ReadSyncRepositoryImpl(
             return
         }
 
+        // TODO purge DB of garbage items
+//        val deleteChapters = mutableListOf<ChapterEntity>()
+//        for (entity in chapterDb.getAllSync()) {
+//            if (entity.externalUrl?.contains("global.manga-up") == true) {
+//                deleteChapters.add(entity)
+//            }
+//        }
+//        if (deleteChapters.isNotEmpty()) {
+//            chapterDb.delete(deleteChapters)
+//        }
+
         // refresh token
         val refreshCompletionJob = CompletableFuture<Unit>()
         appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))
@@ -130,8 +141,13 @@ internal class ReadSyncRepositoryImpl(
         // get all followed chapters
         val followedChaptersResponse = userService.getFollowedChapters()
 
+        // TODO add ability to block external urls or scanlation groups
+        val filteredChaptersResponse = followedChaptersResponse.filter {
+            it.attributes.externalUrl?.contains("global.manga-up") ?: true
+        }
+
         // map chapters into the manga ids
-        val mangaIdsFromChapters = followedChaptersResponse.mapNotNull { chapters -> chapters.relationships?.firstOrNull { it.type == "manga" }?.id }.toSet()
+        val mangaIdsFromChapters = filteredChaptersResponse.mapNotNull { chapters -> chapters.relationships?.firstOrNull { it.type == "manga" }?.id }.toSet()
 
         Clog.i("Refreshing manga series count: ${mangaIdsFromChapters.count()}")
 
@@ -154,7 +170,7 @@ internal class ReadSyncRepositoryImpl(
         }
 
         // convert chapters to DB format
-        val chapterEntities = followedChaptersResponse.map { ChapterEntity.from(it) }
+        val chapterEntities = filteredChaptersResponse.map { ChapterEntity.from(it) }
 
         // find the new chapters
         val newChaptersEntities = chapterEntities.filter { !chapterDb.containsChapter(it.id) }
