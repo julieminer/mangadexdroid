@@ -21,6 +21,7 @@ import com.melonhead.lib_logging.Clog
 import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_read_status.ReadStatusRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import java.util.concurrent.CompletableFuture
 
 interface ReadSyncRepository {
@@ -38,7 +40,7 @@ interface ReadSyncRepository {
 
 internal class ReadSyncRepositoryImpl(
     private val context: Context,
-    private val externalScope: CoroutineScope,
+    externalScope: CoroutineScope,
     private val appData: AppData,
     private val userService: UserService,
     private val mangaService: MangaService,
@@ -50,18 +52,20 @@ internal class ReadSyncRepositoryImpl(
     private val readStatusRepository: ReadStatusRepository,
     private val appEventsRepository: AppEventsRepository,
 ): ReadSyncRepository {
-    private val pullMangaThrottled: (AppEvent) -> Unit = throttleLatest(300L, externalScope) { event ->
-        externalScope.launch { pullManga((event as? UserEvent.RefreshManga)?.completionJob) }
+    private val scope = externalScope + SupervisorJob()
+
+    private val pullMangaThrottled: (AppEvent) -> Unit = throttleLatest(300L, scope) { event ->
+        scope.launch { pullManga((event as? UserEvent.RefreshManga)?.completionJob) }
     }
 
     private val mutableRefreshStatus = MutableStateFlow<MangaRefreshStatus>(MangaRefreshStatus.None)
-    override val refreshStatus = mutableRefreshStatus.shareIn(externalScope, replay = 0, started = SharingStarted.WhileSubscribed())
+    override val refreshStatus = mutableRefreshStatus.shareIn(scope, replay = 0, started = SharingStarted.WhileSubscribed())
 
     private var hasLaunched = false
 
     init {
         Clog.i("ReadSyncRepository init")
-        externalScope.launch {
+        scope.launch {
             // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events

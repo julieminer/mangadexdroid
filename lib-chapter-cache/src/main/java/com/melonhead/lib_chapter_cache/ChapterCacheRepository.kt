@@ -19,6 +19,7 @@ import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -54,16 +56,17 @@ internal class ChapterCacheRepositoryImpl(
     private val atHomeService: AtHomeService,
     private val appContext: Context,
     private val httpClient: HttpClient,
-    private val externalScope: CoroutineScope,
+    externalScope: CoroutineScope,
     private val appEventsRepository: AppEventsRepository,
 
     private val chapterDb: ChapterDao,
     private val mangaDb: MangaDao,
     private val readStatusRepository: ReadStatusRepository,
 ) : ChapterCacheRepository {
+    private val scope = externalScope + SupervisorJob()
 
-    private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(1000L, externalScope) { pair ->
-        externalScope.launch { updateChapterCache(pair.first, pair.second) }
+    private val updateChapterCacheThrottled: (Pair<List<MangaEntity>, List<ChapterEntity>>) -> Unit = throttleLatest(1000L, scope) { pair ->
+        scope.launch { updateChapterCache(pair.first, pair.second) }
     }
 
     private val mutableCachingStatus = MutableStateFlow<CachingStatus>(CachingStatus.None)
@@ -74,7 +77,7 @@ internal class ChapterCacheRepositoryImpl(
 
     init {
         Clog.i("ChapterCache init")
-        externalScope.launch {
+        scope.launch {
             // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
@@ -124,7 +127,7 @@ internal class ChapterCacheRepositoryImpl(
             }
         }
 
-        externalScope.launch {
+        scope.launch {
             combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers) { manga, chapters, _ ->
                 manga to chapters
             }.collectLatest { event ->
@@ -175,7 +178,7 @@ internal class ChapterCacheRepositoryImpl(
     private fun updateChapterCache(manga: List<MangaEntity>, chapters: List<ChapterEntity>) {
         if (!context.isNetworkAvailable()) return
 
-        externalScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             cacheOperation {
                 val newChapters = chapters
                     .filter { chapter ->
@@ -308,7 +311,7 @@ internal class ChapterCacheRepositoryImpl(
     }
 
     override fun clearChapterFromCache(mangaId: String, chapterId: String) {
-        externalScope.launch {
+        scope.launch {
             cacheOperation {
                 clearChapterFromCacheInternal(mangaId, chapterId)
             }
@@ -316,7 +319,7 @@ internal class ChapterCacheRepositoryImpl(
     }
 
     override fun clearCacheForManga(mangaId: String) {
-        externalScope.launch  {
+        scope.launch  {
             cacheOperation {
                 try {
                     Clog.i("Clearing cache for manga $mangaId")

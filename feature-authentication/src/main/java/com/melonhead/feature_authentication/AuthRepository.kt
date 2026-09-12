@@ -11,9 +11,11 @@ import com.melonhead.lib_core.extensions.isNetworkAvailable
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 
 interface AuthRepository {
     suspend fun authenticate(email: String, password: String, clientId: String, clientSecret: String)
@@ -26,8 +28,10 @@ internal class AuthRepositoryImpl(
     private val appEventsRepository: AppEventsRepository,
     externalScope: CoroutineScope,
 ) : AuthRepository {
+    private val scope = externalScope + SupervisorJob()
+
     init {
-        externalScope.launch {
+        scope.launch {
             if (appData.token.firstOrNull() != null) {
                 appEventsRepository.postEvent(AuthenticationEvent.LoggingIn)
                 refreshOAuthToken(logoutOnFail = false)
@@ -36,7 +40,7 @@ internal class AuthRepositoryImpl(
             }
         }
 
-        externalScope.launch(context = Dispatchers.IO) {
+        scope.launch(context = Dispatchers.IO) {
             appEventsRepository.events.collectLatest {
                 launch {
                     when (it) {

@@ -15,17 +15,20 @@ import com.melonhead.lib_database.manga.MangaEntity
 import com.melonhead.lib_notifications.models.ChapterNotification
 import com.melonhead.lib_read_status.ReadStatusRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 
 interface NotificationsRepository
 
 internal class NotificationsRepositoryImpl(
     private val context: Context,
     private val appContext: AppContext,
-    private val externalScope: CoroutineScope,
+    externalScope: CoroutineScope,
     private val appData: AppData,
 
     private val mangaDb: MangaDao,
@@ -37,9 +40,10 @@ internal class NotificationsRepositoryImpl(
     private val newChapterNotificationChannel: NewChapterNotificationChannel,
 ): NotificationsRepository {
     private var hasLaunched = false
+    private val scope = externalScope + SupervisorJob()
 
     init {
-        externalScope.launch {
+        scope.launch {
             // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
@@ -74,7 +78,7 @@ internal class NotificationsRepositoryImpl(
             }
         }
 
-        externalScope.launch {
+        scope.launch {
             combine(mangaDb.allSeries(), chapterDb.allChapters()) { manga, chapters ->
                 launch {
                     postNewChapterNotifications(manga, chapters)

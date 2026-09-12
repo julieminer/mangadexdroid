@@ -11,10 +11,12 @@ import com.melonhead.lib_database.readmarkers.ReadMarkerDao
 import com.melonhead.lib_database.readmarkers.ReadMarkerEntity
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 
 interface ReadStatusRepository {
     suspend fun refresh(manga: List<MangaEntity>, chapters: List<ChapterEntity>)
@@ -23,12 +25,13 @@ interface ReadStatusRepository {
 }
 
 internal class ReadStatusRepositoryImpl(
-    private val externalScope: CoroutineScope,
+    externalScope: CoroutineScope,
     private val readMarkerDb: ReadMarkerDao,
     private val chapterDb: ChapterDao,
     private val mangaService: MangaService,
     private val appEventsRepository: AppEventsRepository,
 ) : ReadStatusRepository {
+    private val scope = externalScope + SupervisorJob()
 
     private val internalReadMarker = readMarkerDb.getAll().distinctUntilChanged()
     override val readMarkers: Flow<List<ReadMarkerEntity>>
@@ -36,7 +39,7 @@ internal class ReadStatusRepositoryImpl(
 
     init {
         Clog.i("ReadStatus.init")
-        externalScope.launch {
+        scope.launch {
             // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
@@ -95,7 +98,7 @@ internal class ReadStatusRepositoryImpl(
     }
 
     private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) {
-        externalScope.launch {
+        scope.launch {
             Clog.i("ReadStatus.markChapterRead: mangaId: $mangaId, chapterId: $chapterId, read: $read")
 
             val chapter = chapterDb.getChapterForId(chapterId)

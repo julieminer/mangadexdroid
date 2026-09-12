@@ -21,11 +21,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 
 internal interface MangaRepository {
@@ -38,7 +40,7 @@ internal interface MangaRepository {
 
 internal class MangaRepositoryImpl(
     private val context: Context,
-    private val externalScope: CoroutineScope,
+    externalScope: CoroutineScope,
     private val appData: AppData,
     private val atHomeService: AtHomeService,
     private val chapterDb: ChapterDao,
@@ -49,6 +51,7 @@ internal class MangaRepositoryImpl(
     private val appEventsRepository: AppEventsRepository,
     private val readSyncRepository: ReadSyncRepository,
 ): MangaRepository {
+    private val scope = externalScope + SupervisorJob()
 
     override val refreshStatus: Flow<MangaRefreshStatus>
         get() = readSyncRepository.refreshStatus
@@ -57,17 +60,18 @@ internal class MangaRepositoryImpl(
     override val manga = combine(mangaDb.allSeries(), chapterDb.allChapters(), readStatusRepository.readMarkers, chapterCacheRepository.cachingStatus) { dbSeries, dbChapters, _, cacheStatus ->
         generateUIManga(dbSeries, dbChapters, cacheStatus)
     }.shareIn(externalScope, replay = 1, started = SharingStarted.WhileSubscribed())
+    }.shareIn(scope, replay = 1, started = SharingStarted.WhileSubscribed())
 
     init {
         Clog.i("MangaRepository init")
-        externalScope.launch {
+        scope.launch {
             combine(mangaDb.allSeries()) { dbSeries ->
                 dbSeries
             }.collectLatest {
             }
         }
 
-        externalScope.launch {
+        scope.launch {
             // refresh manga on login
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
@@ -205,21 +209,21 @@ internal class MangaRepositoryImpl(
     }
 
     private fun markChapterBlocked(chapterId: String, blocked: Boolean) {
-        externalScope.launch {
+        scope.launch {
             val chapter = chapterDb.getChapterForId(chapterId).copy(blockedChapter = blocked)
             chapterDb.update(chapter)
         }
     }
 
     private fun setUseWebview(mangaId: String, useWebView: Boolean) {
-        externalScope.launch(Dispatchers.Main) {
+        scope.launch(Dispatchers.Main) {
             val entity = mangaDb.mangaByIdAsyncDistinct(mangaId).first() ?: return@launch
             mangaDb.update(entity.copy(useWebview = useWebView))
         }
     }
 
     private fun updateChosenTitle(mangaId: String, chosenTitle: String) {
-        externalScope.launch(Dispatchers.Main) {
+        scope.launch(Dispatchers.Main) {
             val entity = mangaDb.mangaByIdAsyncDistinct(mangaId).first() ?: return@launch
             if (!entity.mangaTitles.contains(chosenTitle)) return@launch
             mangaDb.update(entity.copy(chosenTitle = chosenTitle))

@@ -20,17 +20,19 @@ import com.melonhead.lib_database.sync_queue.SyncQueueEntity
 import com.melonhead.lib_database.sync_queue.SyncQueueEvent
 import com.melonhead.lib_logging.Clog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import java.util.concurrent.CompletableFuture
 
 interface WriteSyncRepository
 
 internal class WriteSyncRepositoryImpl(
     private val context: Context,
-    private val externalScope: CoroutineScope,
+    externalScope: CoroutineScope,
     private val appEventsRepository: AppEventsRepository,
     private val syncQueueDb: SyncQueueDao,
     private val ratingService: RatingService,
@@ -39,13 +41,15 @@ internal class WriteSyncRepositoryImpl(
     private val mangaDb: MangaDao,
     private val chapterDb: ChapterDao,
 ) : WriteSyncRepository {
-    private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, externalScope) { _ ->
+    private val scope = externalScope + SupervisorJob()
+
+    private val processQueueThrottled: (Unit) -> Unit = throttleLatest(1000L, scope) { _ ->
         processQueue()
     }
 
     init {
         Clog.i("WriteSyncRepository.init")
-        externalScope.launch {
+        scope.launch {
             try {
                 // TODO: it's easy to miss necessary events with this pattern, it would be better to include a way to pass in the list of expected events
                 appEventsRepository.events.collectLatest { event ->
@@ -92,22 +96,22 @@ internal class WriteSyncRepositoryImpl(
         }
     }
 
-    private fun setMangaRating(mangaId: String, rating: Int) = externalScope.launch {
+    private fun setMangaRating(mangaId: String, rating: Int) = scope.launch {
         syncQueueDb.insert(SyncQueueEntity(event = SyncQueueEvent.ChangeRating(mangaId = mangaId, rating)))
         processQueueThrottled(Unit)
     }
 
-    private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) = externalScope.launch {
+    private fun markChapterRead(mangaId: String, chapterId: String, read: Boolean) = scope.launch {
         syncQueueDb.insert(SyncQueueEntity(event = SyncQueueEvent.MarkRead(mangaId = mangaId, chapterId = chapterId, read = read)))
         processQueueThrottled(Unit)
     }
 
-    private fun setMangaReadingStatus(mangaId: String, readingStatus: String) = externalScope.launch {
+    private fun setMangaReadingStatus(mangaId: String, readingStatus: String) = scope.launch {
         syncQueueDb.insert(SyncQueueEntity(event = SyncQueueEvent.ChangeSeriesReadingStatus(mangaId = mangaId, readingStatus = readingStatus)))
         processQueueThrottled(Unit)
     }
 
-    private fun setUpdateMangaReadingStatus(mangaId: String, chapterId: String, readPostedChapter: Boolean) = externalScope.launch {
+    private fun setUpdateMangaReadingStatus(mangaId: String, chapterId: String, readPostedChapter: Boolean) = scope.launch {
         syncQueueDb.insert(SyncQueueEntity(event = SyncQueueEvent.UpdateMangaReadingStatus(mangaId = mangaId, chapterId = chapterId, readPostedChapter = readPostedChapter)))
         processQueueThrottled(Unit)
     }
@@ -115,7 +119,7 @@ internal class WriteSyncRepositoryImpl(
     private fun processQueue() {
         if (!context.isNetworkAvailable()) return
 
-        externalScope.launch {
+        scope.launch {
             val refreshCompletionJob = CompletableFuture<Unit>()
             appEventsRepository.postEvent(AuthenticationEvent.RefreshToken(completionJob = refreshCompletionJob))
             refreshCompletionJob.await()
