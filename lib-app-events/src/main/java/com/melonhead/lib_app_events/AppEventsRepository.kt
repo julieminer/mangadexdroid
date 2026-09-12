@@ -20,7 +20,7 @@ internal class AppEventsRepositoryImpl(
     private val context: Context,
     private val coroutineScope: CoroutineScope,
 ): AppEventsRepository {
-    private val mutableEvents = MutableSharedFlow<AppEvent>()
+    private val mutableEvents = MutableSharedFlow<AppEvent>(extraBufferCapacity = 10)
     override val events: Flow<AppEvent> = mutableEvents.asSharedFlow()
 
     init {
