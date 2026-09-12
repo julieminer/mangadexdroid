@@ -93,11 +93,23 @@ internal fun ChapterListItem(
                         )
                     }
                 }
-                Text(text = uiChapter.title ?: "",
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                    color = if (canInteract) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                )
+                if (uiChapter.title != null) {
+                    Text(
+                        text = uiChapter.title!!,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 14.sp,
+                        color = if (canInteract) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onBackground.copy(
+                            alpha = 0.5f
+                        ),
+                    )
+                }
+                if (uiChapter.externalUrl != null) {
+                    Text(text = uiChapter.getExternalUrlBase()!!,
+                        color = if (canInteract) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Light,
+                        fontSize = 10.sp
+                    )
+                }
                 Text(text = Instant.fromEpochSeconds(uiChapter.createdDate).dateOrTimeString(),
                     color = if (canInteract) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
                     fontWeight = FontWeight.Light,

@@ -1,6 +1,7 @@
 package com.melonhead.data_shared.models.ui
 
 import android.os.Parcelable
+import io.ktor.http.Url
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
@@ -19,4 +20,15 @@ data class UIChapter(
     Parcelable {
     @IgnoredOnParcel
     val webAddress: String = "https://mangadex.org/chapter/$id"
+
+    fun getExternalUrlBase(): String? {
+        if (externalUrl == null) return null
+        try {
+            val url = Url(externalUrl)
+            return url.host
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
 }
