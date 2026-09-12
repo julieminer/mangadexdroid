@@ -108,7 +108,6 @@ internal class MangaListViewModel(
                     val chapterData = mangaRepository.getChapterData(mangaId, chapterId)
                     // use secondary render style
                     if (chapterData.isNullOrEmpty()) {
-                        appEventsRepository.postEvent(UserEvent.SetUseWebView(mangaId, true))
                         navigateToWebView(context, uiManga, uiChapter)
                     } else {
                         navigator.intentForKey(context, ActivityKey.ChapterActivity(

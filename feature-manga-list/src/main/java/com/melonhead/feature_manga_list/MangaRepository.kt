@@ -102,8 +102,6 @@ internal class MangaRepositoryImpl(
         mangaJobs.addAll(dbSeries.map { manga ->
             async {
                 Clog.measure("julie: ui manga") {
-                    var hasExternalChapters = false
-
                     val chapterJobs = mutableListOf<Deferred<UIChapter>>()
 
                     val chaptersToConsider = Clog.measure("julie: ui chapters to consider") {
@@ -125,7 +123,6 @@ internal class MangaRepositoryImpl(
                                         chapter.id
                                     ) }
 
-                                    hasExternalChapters = hasExternalChapters || chapter.externalUrl != null
                                     UIChapter(
                                         id = chapter.id,
                                         chapter = chapter.chapter,
@@ -153,7 +150,7 @@ internal class MangaRepositoryImpl(
                         manga.chosenTitle ?: "",
                         chapters = chapters,
                         manga.mangaCoverId,
-                        useWebview = hasExternalChapters || manga.useWebview,
+                        useWebview = manga.useWebview,
                         altTitles = manga.mangaTitles,
                         tags = manga.tags.sortedBy { it.id }.map { it.name },
                         status = manga.status,
